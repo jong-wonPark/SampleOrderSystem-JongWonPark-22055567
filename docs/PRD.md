@@ -49,54 +49,54 @@
 [고객]
   │ 시료ID / 고객명 / 주문수량
   ▼
-[주문 접수 (Received)]
+[주문 접수 (RESERVED)]
   │ 주문 담당자 → 생산 담당자에게 전달
-  ▼
-[검토 대기 (Pending)]
   │
-  ├─ 거절 ──────────────────────────────→ [거절됨 (Rejected)]  ★ 종료
+  ├─ 거절 ──────────────────────────────→ [거절됨 (REJECTED)]  ★ 종료
   │
   └─ 승인
        │
-       ▼
-  [승인됨 (Approved)]
-       │
-       ├─ 재고 ≥ 주문수량 ──────────────→ [출고 준비 (ReadyToShip)]
-       │                                         │
-       └─ 재고 < 주문수량                         │
-            │                                    │
-            ▼                                    │
-       [생산 요청 (ProductionRequested)]           │
-            │ → 생산 큐(FIFO) 등록                │
-            ▼                                    │
-       [생산 중 (InProduction)]                   │
-            │ 생산 완료                           │
-            └────────────────────────────────────┘
-                                                  │
-                                             생산 담당자가
-                                             출고 처리
-                                                  │
-                                                  ▼
-                                           [출고됨 (Shipped)]  ★ 종료
+       ├─ 재고 ≥ 주문수량 ──────────────→ [출고 대기 (CONFIRMED)]
+       │   재고 즉시 차감                          │
+       │                                          │
+       └─ 재고 < 주문수량                          │
+            │                                     │
+            ▼                                     │
+       [생산 중 (PRODUCING)]                       │
+            │ 생산 큐(FIFO) 등록                   │
+            │ 생산 완료 → 재고 차감                 │
+            └─────────────────────────────────────┘
+                                                   │
+                                              생산 담당자가
+                                              출고 처리
+                                                   │
+                                                   ▼
+                                            [출고 완료 (RELEASE)]  ★ 종료
 ```
 
 ### 3.2 OrderStatus 열거형
 ```
-Received           // 주문 접수
-Pending            // 생산 담당자 검토 대기
-Approved           // 승인됨 (재고 확인 전)
-Rejected           // 거절됨 (최종)
-ReadyToShip        // 출고 준비 (재고 확보 완료)
-ProductionRequested // 생산 요청됨 (재고 부족)
-InProduction       // 생산 중
-Shipped            // 출고 완료 (최종)
+RESERVED   // 주문 접수 (주문 담당자가 등록, 생산 담당자 검토 대기 포함)
+REJECTED   // 주문 거절 (최종)
+PRODUCING  // 주문 승인 완료 및 재고 부족으로 생산 중
+CONFIRMED  // 주문 승인 완료 및 출고 대기 중 (재고 확보 완료)
+RELEASE    // 출고 완료 (최종)
 ```
 
-### 3.3 생산 큐 (FIFO)
-- 재고 부족 시 `ProductionQueueItem`이 큐 말단에 추가된다.
-- 처리는 항상 큐 앞(front)에서 시작한다.
-- 큐 항목 상태: `Waiting` → `InProduction` → 완료 시 큐에서 제거 + 대응 Order를 `ReadyToShip`으로 갱신.
-- 대기(`Waiting`) 상태에 한해 취소 가능.
+### 3.3 상태 전이 규칙 요약
+| 현재 상태 | 다음 상태 | 트리거 | 처리 내용 |
+|---|---|---|---|
+| `RESERVED` | `REJECTED` | 생산 담당자 거절 | 거절 사유 기록 |
+| `RESERVED` | `CONFIRMED` | 생산 담당자 승인 + 재고 충분 | 재고 즉시 차감 |
+| `RESERVED` | `PRODUCING` | 생산 담당자 승인 + 재고 부족 | 생산 큐(FIFO) 말단에 등록 |
+| `PRODUCING` | `CONFIRMED` | 생산 완료 | 큐에서 제거, 재고 차감 |
+| `CONFIRMED` | `RELEASE` | 생산 담당자 출고 처리 | 출고 완료 기록 |
+
+### 3.4 생산 큐 (FIFO)
+- `PRODUCING` 상태 주문은 반드시 생산 큐에 1:1 대응하는 `ProductionQueueItem`을 가진다.
+- 처리는 항상 큐 앞(front)에서 시작한다 (`queued_at` 기준 오름차순).
+- 큐 항목 상태: `Waiting` → `InProduction` → 완료 시 큐에서 제거 + 연결 Order를 `CONFIRMED`으로 갱신.
+- `Waiting` 상태에 한해 취소 가능 (Order도 함께 `RESERVED`로 롤백하지 않고 별도 처리).
 
 ---
 
@@ -236,7 +236,7 @@ struct Order {
     std::string  sample_name;    // 시료명 (비정규화, 표시용)
     std::string  customer_name;  // 고객명
     int          order_quantity; // 주문수량
-    OrderStatus  status;         // 상태 enum
+    OrderStatus  status;         // RESERVED / REJECTED / PRODUCING / CONFIRMED / RELEASE
     std::string  order_date;     // 주문 접수 일시 (ISO 8601)
     std::string  note;           // 거절 사유 등 메모 (선택)
 };
@@ -262,33 +262,33 @@ struct ProductionQueueItem {
 
 ### 7.1 OrderService
 ```cpp
-// 주문 담당자: 주문 등록
+// 주문 담당자: 주문 등록 (→ RESERVED)
 Order  placeOrder(sample_id, customer_name, quantity);
 
-// 주문 담당자: 검토 대기로 전달 (Received → Pending)
-bool   forwardToPending(order_number);
-
-// 생산 담당자: 승인 (Pending → Approved → ReadyToShip or ProductionRequested)
+// 생산 담당자: 승인
+//   재고 충분 → InventoryService::deductStock() → CONFIRMED
+//   재고 부족 → ProductionService::enqueueProduction() → PRODUCING
 bool   approveOrder(order_number);
 
-// 생산 담당자: 거절 (Pending → Rejected)
+// 생산 담당자: 거절 (RESERVED → REJECTED)
 bool   rejectOrder(order_number, note);
 ```
 
 ### 7.2 ProductionService
 ```cpp
-// approveOrder 내부에서 자동 호출: 재고 부족 시 큐 등록
+// approveOrder 내부에서 자동 호출: 재고 부족 시 큐 등록 (Order → PRODUCING)
 ProductionQueueItem enqueueProduction(order_number);
 
 // 생산 담당자: 큐 앞(front) 항목 생산 시작 (Waiting → InProduction)
 bool   startNextProduction();
 
 // 생산 담당자: 생산 완료 처리
-//   → ProductionQueueItem 제거
-//   → 연결 Order를 ReadyToShip으로 갱신
+//   → ProductionQueueItem 큐에서 제거
+//   → InventoryService::deductStock() (주문량 차감)
+//   → 연결 Order를 CONFIRMED으로 갱신
 bool   completeProduction(production_id);
 
-// 생산 담당자: 출고 처리 (ReadyToShip → Shipped)
+// 생산 담당자: 출고 처리 (CONFIRMED → RELEASE)
 bool   shipOrder(order_number);
 ```
 
@@ -322,7 +322,7 @@ bool   addStock(sample_id, quantity);
 **목표**: 모든 데이터 구조 정의. 이 단계 이후 전체 계층이 타입을 공유한다.
 
 1. `Models/Enums.h`
-   - `OrderStatus` enum class (8개 값) + `toString()` inline 함수
+   - `OrderStatus` enum class (5개 값: RESERVED, REJECTED, PRODUCING, CONFIRMED, RELEASE) + `toString()` inline 함수
    - `ProductionQueueStatus` enum class (Waiting, InProduction) + `toString()`
 2. `Models/SampleItem.h` — 시료 마스터 구조체
 3. `Models/InventoryItem.h` — 재고 구조체
@@ -373,21 +373,19 @@ bool   addStock(sample_id, quantity);
    - `getStock(sample_id)`, `hasEnoughStock(sample_id, quantity)`
    - `deductStock()`, `addStock()`
 2. `Services/OrderService.h/.cpp`
-   - `placeOrder()`: Order 생성, status=Received
-   - `forwardToPending()`: Received → Pending
-   - `approveOrder()`: Pending → Approved, 재고 확인 후 분기
-     - 재고 충분 → `InventoryService::deductStock()` → ReadyToShip
-     - 재고 부족 → `ProductionService::enqueueProduction()` → ProductionRequested
-   - `rejectOrder()`: Pending → Rejected
+   - `placeOrder()`: Order 생성, status=RESERVED
+   - `approveOrder()`: RESERVED → 재고 확인 후 분기
+     - 재고 충분 → `InventoryService::deductStock()` → CONFIRMED
+     - 재고 부족 → `ProductionService::enqueueProduction()` → PRODUCING
+   - `rejectOrder()`: RESERVED → REJECTED
 3. `Services/ProductionService.h/.cpp`
-   - `enqueueProduction(order_number)`: 큐 말단에 추가
+   - `enqueueProduction(order_number)`: 큐 말단에 추가, Order → PRODUCING
    - `startNextProduction()`: 큐 front Waiting → InProduction
    - `completeProduction(production_id)`:
      - 큐에서 제거
-     - `InventoryService::addStock()` (생산량 입고)
      - `InventoryService::deductStock()` (주문량 차감)
-     - Order status → ReadyToShip
-   - `shipOrder(order_number)`: ReadyToShip → Shipped
+     - Order status → CONFIRMED
+   - `shipOrder(order_number)`: CONFIRMED → RELEASE
 
 ---
 
@@ -414,9 +412,9 @@ bool   addStock(sample_id, quantity);
 
 1. `Controllers/OrderController.h/.cpp`
    - `showOrderList()`: 주문 목록 조회 → OrderView 출력
-   - `placeOrder()`: View에서 입력 수집 → OrderService 호출
-   - `forwardOrder()`: OrderService::forwardToPending() 호출
-   - `approveOrder()`, `rejectOrder()`: 생산 담당자 액션
+   - `placeOrder()`: View에서 입력 수집 → OrderService::placeOrder() (→ RESERVED)
+   - `approveOrder()`: OrderService::approveOrder() (→ CONFIRMED or PRODUCING)
+   - `rejectOrder()`: OrderService::rejectOrder() (→ REJECTED)
 2. `Controllers/ProductionController.h/.cpp`
    - `showProductionQueue()`: 큐 현황 → ProductionView 출력
    - `startProduction()`: ProductionService::startNextProduction()
@@ -442,9 +440,9 @@ bool   addStock(sample_id, quantity);
    app.run();
    ```
 2. 전체 상태 전이 흐름 수동 검증:
-   - 주문 접수 → 전달 → 승인 → 재고 있음 → 출고
-   - 주문 접수 → 전달 → 승인 → 재고 없음 → 생산 큐 → 생산 시작 → 생산 완료 → 출고
-   - 주문 접수 → 전달 → 거절
+   - RESERVED → 승인 + 재고 있음 → CONFIRMED → RELEASE
+   - RESERVED → 승인 + 재고 없음 → PRODUCING → (생산 완료) → CONFIRMED → RELEASE
+   - RESERVED → 거절 → REJECTED
 3. JSON 파일 영속성 확인: 앱 재시작 후 데이터 복구
 
 ---
@@ -456,7 +454,7 @@ bool   addStock(sample_id, quantity);
 2. `DummyDataGenerator/src/main.cpp`
    - 시료 마스터 10종 생성 (다양한 반도체 품목)
    - 초기 재고 랜덤 설정 (일부는 0으로 재고 부족 시나리오 포함)
-   - 주문 20건 생성 (Received/Pending/Approved/Rejected 혼합)
+   - 주문 20건 생성 (RESERVED/PRODUCING/CONFIRMED/REJECTED/RELEASE 혼합)
    - 생산 큐 5건 생성 (Waiting/InProduction 혼합)
 3. `DataPersistence.h/.cpp` 공유 처리 (솔루션 내 동일 파일 참조)
 
