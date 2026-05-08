@@ -137,6 +137,13 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Models\Enums.h" />
+    <ClInclude Include="Models\SampleItem.h" />
+    <ClInclude Include="Models\InventoryItem.h" />
+    <ClInclude Include="Models\Order.h" />
+    <ClInclude Include="Models\ProductionQueueItem.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
