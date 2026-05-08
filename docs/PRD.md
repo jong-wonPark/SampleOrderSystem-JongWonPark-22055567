@@ -100,9 +100,55 @@ RELEASE    // 출고 완료 (최종)
 
 ---
 
-## 4. 아키텍처 설계
+## 4. 메인 메뉴 구조
 
-### 4.1 계층 구조 (ConsoleMVC 패턴 준수)
+### 4.1 메뉴 화면 레이아웃
+```
+============================================
+     s-semi 시료 관리 시스템
+============================================
+ 1. 시료 관리
+ 2. 시료 주문
+ 3. 주문 승인/거절
+ 4. 모니터링
+ 5. 출고 처리
+ 6. 생산 라인
+ 0. 종료
+--------------------------------------------
+메뉴를 선택하세요:
+```
+
+### 4.2 메뉴별 기능 상세
+
+| 번호 | 메뉴명 | 세부 기능 | 담당 Controller / View |
+|---|---|---|---|
+| 1 | **시료 관리** | 새로운 시료 등록 / 시료 목록 조회 / 이름으로 검색 | `SampleController` / `SampleView` |
+| 2 | **시료 주문** | 고객 주문 접수 (시료ID·고객명·수량 입력 → RESERVED 생성) | `OrderController` / `OrderView` |
+| 3 | **주문 승인/거절** | RESERVED 주문 목록 표시 → 승인(재고 확인 분기) or 거절 | `OrderController` / `OrderView` |
+| 4 | **모니터링** | 상태별 주문 건수 요약 + 시료별 재고 현황 테이블 | `MonitoringController` / `MonitoringView` |
+| 5 | **출고 처리** | CONFIRMED 상태 주문 목록 표시 → 출고 실행(→ RELEASE) | `ProductionController` / `ProductionView` |
+| 6 | **생산 라인** | 생산 중(InProduction) 항목 + 대기 큐(Waiting) 목록 확인 및 생산 시작·완료 처리 | `ProductionController` / `ProductionView` |
+| 0 | **종료** | 프로그램 정상 종료 | `AppController` |
+
+### 4.3 메뉴별 구현 Phase 매핑
+
+| 메뉴 | 첫 완성 Phase | 핵심 구현 내용 |
+|---|---|---|
+| 시료 관리 | **Phase 6** | Phase 1 `SampleItem` 모델 → Phase 2 `InventoryManager` → Phase 3 `InventoryRepository` → Phase 4 `InventoryService` → Phase 5 `SampleView` → Phase 6 `SampleController` |
+| 시료 주문 | **Phase 6** | Phase 1 `Order` 모델 → Phase 2 `OrderManager` → Phase 3 `OrderRepository` → Phase 4 `OrderService::placeOrder` → Phase 5 `OrderView` → Phase 6 `OrderController` |
+| 주문 승인/거절 | **Phase 6** | Phase 4 `OrderService::approveOrder / rejectOrder`(상태 전이 핵심) → Phase 5 `OrderView` → Phase 6 `OrderController` |
+| 모니터링 | **Phase 6** | Phase 3 Repository 집계 쿼리(`findByStatus` 등) → Phase 4 조회 서비스 → Phase 5 `MonitoringView` → Phase 6 `MonitoringController` |
+| 출고 처리 | **Phase 6** | Phase 4 `ProductionService::shipOrder`(CONFIRMED→RELEASE) → Phase 5 `ProductionView` → Phase 6 `ProductionController` |
+| 생산 라인 | **Phase 6** | Phase 3 `ProductionQueueRepository::getFront / getWaitingQueue` → Phase 4 `ProductionService::startNextProduction / completeProduction` → Phase 5 `ProductionView` → Phase 6 `ProductionController` |
+| 종료 | **Phase 6** | `AppController::run()` 루프 탈출 조건 처리 |
+
+> **요점**: 모든 메뉴는 Phase 6(Controller 계층)에서 처음 완성되며, Phase 4(Service)가 각 메뉴의 핵심 비즈니스 로직을 담당한다.
+
+---
+
+## 6. 아키텍처 설계
+
+### 6.1 계층 구조 (ConsoleMVC 패턴 준수)
 ```
 View ─→ Controller ─→ Service ─→ Repository ─→ Model
                                       │
@@ -120,17 +166,17 @@ View ─→ Controller ─→ Service ─→ Repository ─→ Model
 | **View** | 콘솔 출력 및 입력 수집만. 비즈니스 로직 없음 |
 | **AppController** | 모든 의존성 소유·조립 (생성자 수동 DI) |
 
-### 4.2 의존성 주입 구조 (AppController)
+### 6.2 의존성 주입 구조 (AppController)
 ```cpp
 // 생성자 초기화 리스트에서 아래 순서로 조립
 Repositories: InventoryRepo, OrderRepo, ProductionQueueRepo
     ↓ (reference로 주입)
 Services: InventoryService, OrderService, ProductionService
     ↓ (reference로 주입)
-Controllers: OrderController, ProductionController, InventoryController
+Controllers: SampleController, OrderController, ProductionController, MonitoringController
 ```
 
-### 4.3 영속성 전략 (DataPersistence 패턴 준수)
+### 6.3 영속성 전략 (DataPersistence 패턴 준수)
 - JSON 파일 3개를 `data/` 디렉토리에 저장
 - 앱 시작 시 JSON → 인메모리 로드, 변경 시마다 JSON에 즉시 저장
 - 타임스탬프: ISO 8601 형식 (`YYYY-MM-DDTHH:MM:SS`)
@@ -138,7 +184,7 @@ Controllers: OrderController, ProductionController, InventoryController
 
 ---
 
-## 5. 디렉토리 구조 및 파일 목록
+## 7. 디렉토리 구조 및 파일 목록
 
 ```
 SampleOrderSystem/              ← 솔루션 루트
@@ -179,16 +225,18 @@ SampleOrderSystem/              ← 솔루션 루트
 │   │   └── ProductionService.h / .cpp
 │   │
 │   ├── Controllers/            ← 입력→서비스→뷰 연결
-│   │   ├── AppController.h / .cpp   ← 의존성 조립 & 메인루프
-│   │   ├── OrderController.h / .cpp
-│   │   ├── ProductionController.h / .cpp
-│   │   └── InventoryController.h / .cpp
+│   │   ├── AppController.h / .cpp        ← 의존성 조립 & 메인루프 & 종료
+│   │   ├── SampleController.h / .cpp     ← 메뉴 1: 시료 관리
+│   │   ├── OrderController.h / .cpp      ← 메뉴 2·3: 시료 주문·승인/거절
+│   │   ├── MonitoringController.h / .cpp ← 메뉴 4: 모니터링
+│   │   └── ProductionController.h / .cpp ← 메뉴 5·6: 출고 처리·생산 라인
 │   │
 │   └── Views/                  ← 콘솔 입출력
-│       ├── MainMenuView.h / .cpp
-│       ├── OrderView.h / .cpp
-│       ├── ProductionView.h / .cpp
-│       └── InventoryView.h / .cpp
+│       ├── MainMenuView.h / .cpp         ← 메인 메뉴 렌더링
+│       ├── SampleView.h / .cpp           ← 메뉴 1: 시료 관리 UI
+│       ├── OrderView.h / .cpp            ← 메뉴 2·3: 주문·승인 UI
+│       ├── MonitoringView.h / .cpp       ← 메뉴 4: 모니터링 UI
+│       └── ProductionView.h / .cpp       ← 메뉴 5·6: 출고·생산 라인 UI
 │
 ├── DataMonitor/                ← 실시간 모니터링 도구 (별도 프로젝트)
 │   ├── DataMonitor.vcxproj
@@ -206,9 +254,9 @@ SampleOrderSystem/              ← 솔루션 루트
 
 ---
 
-## 6. 데이터 모델 상세
+## 8. 데이터 모델 상세
 
-### 6.1 SampleItem (시료 마스터)
+### 8.1 SampleItem (시료 마스터)
 ```cpp
 struct SampleItem {
     std::string sample_id;                   // 시료ID (예: "S-001")
@@ -218,7 +266,7 @@ struct SampleItem {
 };
 ```
 
-### 6.2 InventoryItem (재고)
+### 8.2 InventoryItem (재고)
 ```cpp
 struct InventoryItem {
     std::string sample_id;
@@ -228,7 +276,7 @@ struct InventoryItem {
 };
 ```
 
-### 6.3 Order (주문)
+### 8.3 Order (주문)
 ```cpp
 struct Order {
     std::string  order_number;   // ORD-YYYYMMDD-XXXX (자동 채번)
@@ -242,7 +290,7 @@ struct Order {
 };
 ```
 
-### 6.4 ProductionQueueItem (생산 큐)
+### 8.4 ProductionQueueItem (생산 큐)
 ```cpp
 struct ProductionQueueItem {
     std::string           production_id;  // PROD-YYYYMMDD-XXXX (자동 채번)
@@ -258,9 +306,9 @@ struct ProductionQueueItem {
 
 ---
 
-## 7. 서비스 계층 핵심 메서드
+## 9. 서비스 계층 핵심 메서드
 
-### 7.1 OrderService
+### 9.1 OrderService
 ```cpp
 // 주문 담당자: 주문 등록 (→ RESERVED)
 Order  placeOrder(sample_id, customer_name, quantity);
@@ -274,7 +322,7 @@ bool   approveOrder(order_number);
 bool   rejectOrder(order_number, note);
 ```
 
-### 7.2 ProductionService
+### 9.2 ProductionService
 ```cpp
 // approveOrder 내부에서 자동 호출: 재고 부족 시 큐 등록 (Order → PRODUCING)
 ProductionQueueItem enqueueProduction(order_number);
@@ -292,7 +340,7 @@ bool   completeProduction(production_id);
 bool   shipOrder(order_number);
 ```
 
-### 7.3 InventoryService
+### 9.3 InventoryService
 ```cpp
 // 재고 조회
 std::optional<InventoryItem> getStock(sample_id);
@@ -306,7 +354,7 @@ bool   addStock(sample_id, quantity);
 
 ---
 
-## 8. 구현 단계 (Phase별 순서)
+## 10. 구현 단계 (Phase별 순서)
 
 ### Phase 0 — 프로젝트 기반 설정
 **목표**: 빌드 환경 구성, 외부 라이브러리 통합
@@ -390,42 +438,53 @@ bool   addStock(sample_id, quantity);
 ---
 
 ### Phase 5 — View 계층
-**목표**: 콘솔 입출력 UI. 비즈니스 로직 없이 표시·입력만.
+**목표**: 콘솔 입출력 UI. 비즈니스 로직 없이 표시·입력만.  
+**구현 메뉴**: 모든 메뉴의 화면 출력 담당
 
-1. `Views/MainMenuView.h/.cpp`
-   - 역할 선택 메뉴 (주문 담당자 / 생산 담당자)
-   - 공통 유틸: `printHeader()`, `printTable()`, `promptInput()`
-2. `Views/OrderView.h/.cpp`
-   - 주문 목록 테이블 출력 (상태 색상 구분)
+1. `Views/MainMenuView.h/.cpp` — 메인 메뉴(0~6번) 렌더링
+   - 공통 유틸: `printHeader()`, `printTable()`, `printLine()`, `promptInput()`
+2. `Views/SampleView.h/.cpp` — **메뉴 1: 시료 관리**
+   - 시료 등록 입력 폼 (시료ID, 명칭, 생산시간, 수율)
+   - 시료 목록 테이블 출력
+   - 이름 검색 결과 출력
+3. `Views/OrderView.h/.cpp` — **메뉴 2·3: 시료 주문·승인/거절**
    - 주문 접수 입력 폼 (시료ID, 고객명, 수량)
-   - 전달/거절/승인 결과 메시지
-3. `Views/ProductionView.h/.cpp`
-   - 생산 큐 목록 (FIFO 순서 표시)
-   - 생산 시작/완료/출고 처리 결과 메시지
-4. `Views/InventoryView.h/.cpp`
-   - 재고 현황 테이블 (시료ID, 명칭, 수량, 단위)
+   - RESERVED 주문 목록 (승인/거절 대상) 출력
+   - 승인·거절 결과 메시지 (CONFIRMED/PRODUCING/REJECTED)
+4. `Views/MonitoringView.h/.cpp` — **메뉴 4: 모니터링**
+   - 상태별 주문 건수 요약표 (RESERVED/PRODUCING/CONFIRMED/RELEASE/REJECTED)
+   - 시료별 재고 현황 테이블 (시료ID, 명칭, 수량)
+5. `Views/ProductionView.h/.cpp` — **메뉴 5·6: 출고 처리·생산 라인**
+   - CONFIRMED 주문 목록 (출고 대상) 출력
+   - 생산 큐 목록 (Waiting/InProduction, FIFO 순서) 출력
+   - 생산 시작·완료·출고 결과 메시지
 
 ---
 
 ### Phase 6 — Controller 계층
 **목표**: 입력→서비스→뷰 파이프라인 연결. Repository 직접 호출 금지.
 
-1. `Controllers/OrderController.h/.cpp`
-   - `showOrderList()`: 주문 목록 조회 → OrderView 출력
-   - `placeOrder()`: View에서 입력 수집 → OrderService::placeOrder() (→ RESERVED)
+1. `Controllers/SampleController.h/.cpp` — **메뉴 1: 시료 관리**
+   - `registerSample()`: SampleView 입력 수집 → InventoryService::addSample()
+   - `showSampleList()`: InventoryService::getAll() → SampleView 출력
+   - `searchByName()`: InventoryService::findByName() → SampleView 출력
+2. `Controllers/OrderController.h/.cpp` — **메뉴 2·3: 시료 주문·승인/거절**
+   - `placeOrder()`: OrderView 입력 수집 → OrderService::placeOrder() (→ RESERVED)
+   - `showPendingOrders()`: OrderService::getByStatus(RESERVED) → OrderView 출력
    - `approveOrder()`: OrderService::approveOrder() (→ CONFIRMED or PRODUCING)
    - `rejectOrder()`: OrderService::rejectOrder() (→ REJECTED)
-2. `Controllers/ProductionController.h/.cpp`
-   - `showProductionQueue()`: 큐 현황 → ProductionView 출력
+3. `Controllers/MonitoringController.h/.cpp` — **메뉴 4: 모니터링**
+   - `showDashboard()`: OrderService 상태별 집계 + InventoryService 재고 조회 → MonitoringView 출력
+4. `Controllers/ProductionController.h/.cpp` — **메뉴 5·6: 출고 처리·생산 라인**
+   - `showConfirmedOrders()`: OrderService::getByStatus(CONFIRMED) → ProductionView 출력
+   - `shipOrder()`: ProductionService::shipOrder() (→ RELEASE)
+   - `showProductionQueue()`: ProductionService::getQueue() → ProductionView 출력
    - `startProduction()`: ProductionService::startNextProduction()
-   - `completeProduction()`: ProductionService::completeProduction()
-   - `shipOrder()`: ProductionService::shipOrder()
-3. `Controllers/InventoryController.h/.cpp`
-   - `showInventory()`: 재고 현황 → InventoryView 출력
-4. `Controllers/AppController.h/.cpp`
+   - `completeProduction()`: ProductionService::completeProduction() (→ CONFIRMED)
+5. `Controllers/AppController.h/.cpp` — **메인 루프 & 종료(0번)**
    - 전체 의존성 소유 (Repository, Service, Controller 인스턴스)
    - 생성자에서 참조로 DI 조립
-   - `run()`: 메인 루프, 역할별 메뉴 분기
+   - `run()`: 메인 루프, 메뉴 번호(0~6) 입력 → 해당 Controller 호출
 
 ---
 
@@ -474,7 +533,7 @@ bool   addStock(sample_id, quantity);
 
 ---
 
-## 9. 코드 컨벤션
+## 11. 코드 컨벤션
 
 | 항목 | 규칙 |
 |---|---|
@@ -488,7 +547,7 @@ bool   addStock(sample_id, quantity);
 
 ---
 
-## 10. 구현 순서 요약 (체크리스트)
+## 12. 구현 순서 요약 (체크리스트)
 
 ```
 Phase 0  [ ] 프로젝트 기반 설정 (빌드 환경, nlohmann/json, data/ 초기 파일)
@@ -496,8 +555,8 @@ Phase 1  [ ] Model 계층 (Enums, SampleItem, InventoryItem, Order, ProductionQu
 Phase 2  [ ] Persistence 계층 (DataPersistence.h/.cpp, Manager 3종, JSON 직렬화)
 Phase 3  [ ] Repository 계층 (Inventory/Order/ProductionQueueRepository)
 Phase 4  [ ] Service 계층 (Inventory/Order/ProductionService, 상태 전이 로직)
-Phase 5  [ ] View 계층 (MainMenu/Order/Production/InventoryView)
-Phase 6  [ ] Controller 계층 (Order/Production/InventoryController, AppController DI)
+Phase 5  [ ] View 계층 (MainMenuView, SampleView, OrderView, MonitoringView, ProductionView)
+Phase 6  [ ] Controller 계층 (SampleController, OrderController, MonitoringController, ProductionController, AppController DI)
 Phase 7  [ ] 통합 및 main.cpp 완성, 전체 흐름 검증
 Phase 8  [ ] DummyDataGenerator 도구
 Phase 9  [ ] DataMonitor 도구
