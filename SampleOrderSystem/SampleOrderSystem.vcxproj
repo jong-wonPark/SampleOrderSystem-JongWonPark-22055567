@@ -136,6 +136,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Persistence\DataPersistence.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Models\Enums.h" />
