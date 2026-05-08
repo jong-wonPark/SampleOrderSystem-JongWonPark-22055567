@@ -1,0 +1,41 @@
+# Visual Studio
+.vs/
+*.user
+x64/
+x86/
+Debug/
+Release/
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.suo
+*.tlb
+*.tlh
+*.bak
+*.ilk
+*.log
+*.pdb
+*.idb
+*.obj
+*.pch
+
+# NuGet packages
+packages/
+
+# CMake
+build/
+CMakeCache.txt
+CMakeFiles/
+
+# 실행 파일
+*.exe
+*.dll
+*.lib
+*.exp
+
+# Claude Code 메타데이터
+.claude/
+.mcp.json
