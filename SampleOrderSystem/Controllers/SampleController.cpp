@@ -42,8 +42,22 @@ void SampleController::handleList() {
 }
 
 void SampleController::handleSearch() {
-    auto keyword = SampleView::promptSearchKeyword();
-    MainMenuView::printHeader("검색 결과: \"" + keyword + "\"");
-    SampleView::showSearchResults(
-        invSvc_.findSamplesByName(keyword), invSvc_.getAllInventory());
+    int type = SampleView::promptSearchType();
+
+    std::string keyword;
+    std::vector<SampleItem> results;
+    auto inventory = invSvc_.getAllInventory();
+
+    if (type == 1) {
+        keyword = SampleView::promptSearchKeyword("검색 키워드 (이름 부분 일치)");
+        MainMenuView::printHeader("이름 검색 결과: \"" + keyword + "\"");
+        results = invSvc_.findSamplesByName(keyword);
+    } else {
+        keyword = SampleView::promptSearchKeyword("시료ID (예: S-001)");
+        MainMenuView::printHeader("ID 검색 결과: \"" + keyword + "\"");
+        if (auto found = invSvc_.findSampleById(keyword))
+            results.push_back(*found);
+    }
+
+    SampleView::showSearchResults(results, inventory);
 }

@@ -46,16 +46,7 @@ int ProductionView::promptProductionSubMenu() {
               << "  2. 생산 완료  (InProduction → CONFIRMED)\n"
               << "  0. 뒤로\n\n";
     MainMenuView::printLine();
-    while (true) {
-        std::cout << "선택: ";
-        std::string line;
-        std::getline(std::cin, line);
-        try {
-            int val = std::stoi(line);
-            if (val >= 0 && val <= 2) return val;
-        } catch (...) {}
-        MainMenuView::showError("0~2 중 하나를 입력하세요.");
-    }
+    return MainMenuView::promptChoice(0, 2);
 }
 
 void ProductionView::showProductionQueue(

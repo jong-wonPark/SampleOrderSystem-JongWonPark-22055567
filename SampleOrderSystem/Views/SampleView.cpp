@@ -12,16 +12,7 @@ int SampleView::promptSubMenu() {
               << "  3. 이름 검색\n"
               << "  0. 뒤로\n\n";
     MainMenuView::printLine();
-    while (true) {
-        std::cout << "선택: ";
-        std::string line;
-        std::getline(std::cin, line);
-        try {
-            int val = std::stoi(line);
-            if (val >= 0 && val <= 3) return val;
-        } catch (...) {}
-        MainMenuView::showError("0~3 중 하나를 입력하세요.");
-    }
+    return MainMenuView::promptChoice(0, 3);
 }
 
 SampleInput SampleView::promptSampleInput() {
@@ -99,9 +90,17 @@ void SampleView::showSampleTable(const std::vector<SampleItem>&    samples,
     std::cout << "  총 " << samples.size() << "종\n";
 }
 
-std::string SampleView::promptSearchKeyword() {
+int SampleView::promptSearchType() {
+    std::cout << "\n"
+              << "  1. 이름으로 검색 (부분 일치)\n"
+              << "  2. ID로 검색 (정확히 일치)\n\n";
+    MainMenuView::printLine();
+    return MainMenuView::promptChoice(1, 2, "1 또는 2를 입력하세요.");
+}
+
+std::string SampleView::promptSearchKeyword(const std::string& label) {
     std::cout << '\n';
-    return MainMenuView::prompt("검색 키워드 (이름 부분 일치)");
+    return MainMenuView::prompt(label);
 }
 
 void SampleView::showSearchResults(const std::vector<SampleItem>&    results,

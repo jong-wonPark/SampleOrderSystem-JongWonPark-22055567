@@ -136,6 +136,23 @@ double MainMenuView::promptDouble(const std::string& label) {
     }
 }
 
+int MainMenuView::promptChoice(int min, int max, const std::string& errMsg) {
+    const std::string msg = errMsg.empty()
+        ? (std::to_string(min) + "~" + std::to_string(max) + " 중 하나를 입력하세요.")
+        : errMsg;
+    while (true) {
+        std::cout << "선택: ";
+        std::string line;
+        std::getline(std::cin, line);
+        try {
+            size_t pos;
+            int val = std::stoi(line, &pos);
+            if (pos == line.size() && val >= min && val <= max) return val;
+        } catch (...) {}
+        showError(msg);
+    }
+}
+
 // ── 메인 메뉴 ────────────────────────────────────────────────────
 
 void MainMenuView::showMainMenu() {

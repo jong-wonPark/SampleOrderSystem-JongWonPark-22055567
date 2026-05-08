@@ -20,7 +20,8 @@ public:
     static SampleInput promptSampleInput();
     static void showSampleTable(const std::vector<SampleItem>&    samples,
                                 const std::vector<InventoryItem>& inventory);
-    static std::string promptSearchKeyword();
+    static int         promptSearchType();   // 1:이름 2:ID
+    static std::string promptSearchKeyword(const std::string& label);
     static void showSearchResults(const std::vector<SampleItem>&    results,
                                   const std::vector<InventoryItem>& inventory);
 };

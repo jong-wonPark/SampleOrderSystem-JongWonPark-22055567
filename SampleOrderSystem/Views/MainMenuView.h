@@ -37,6 +37,8 @@ public:
     static std::string prompt(const std::string& label);
     static int         promptInt(const std::string& label);    // 숫자 아닌 경우 재입력
     static double      promptDouble(const std::string& label);
+    // min~max 범위 정수 선택 루프 (errMsg 생략 시 자동 생성)
+    static int         promptChoice(int min, int max, const std::string& errMsg = "");
 
     // ── 문자열 유틸 (UTF-8 표시 폭 기반) ────────────────────────
     static int         utf8DisplayWidth(const std::string& s);

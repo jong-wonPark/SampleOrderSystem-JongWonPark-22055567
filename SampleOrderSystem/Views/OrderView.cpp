@@ -52,16 +52,18 @@ void OrderView::showReservedOrders(const std::vector<Order>& orders) {
 }
 
 int OrderView::promptSelectOrder(int count) {
-    while (true) {
-        std::cout << "\n처리할 번호를 선택하세요 (0: 뒤로): ";
-        std::string line;
-        std::getline(std::cin, line);
-        try {
-            int val = std::stoi(line);
-            if (val >= 0 && val <= count) return val;
-        } catch (...) {}
-        MainMenuView::showError("1~" + std::to_string(count) + " 또는 0을 입력하세요.");
-    }
+    std::cout << "\n처리할 번호를 선택하세요 (0: 뒤로): " << std::flush;
+    // promptChoice는 "선택: " 접두사를 출력하지만 여기선 이미 별도 안내문을 출력했으므로
+    // 첫 입력만 직접 처리하고, 재시도는 promptChoice에 위임한다
+    std::string line;
+    std::getline(std::cin, line);
+    try {
+        int val = std::stoi(line);
+        if (val >= 0 && val <= count) return val;
+    } catch (...) {}
+    MainMenuView::showError("1~" + std::to_string(count) + " 또는 0을 입력하세요.");
+    return MainMenuView::promptChoice(0, count,
+        "1~" + std::to_string(count) + " 또는 0을 입력하세요.");
 }
 
 void OrderView::showSelectedOrder(const Order& order) {
@@ -82,16 +84,7 @@ int OrderView::promptApproveOrReject() {
               << "  2. 거절\n"
               << "  0. 뒤로\n\n";
     MainMenuView::printLine();
-    while (true) {
-        std::cout << "선택: ";
-        std::string line;
-        std::getline(std::cin, line);
-        try {
-            int val = std::stoi(line);
-            if (val >= 0 && val <= 2) return val;
-        } catch (...) {}
-        MainMenuView::showError("0~2 중 하나를 입력하세요.");
-    }
+    return MainMenuView::promptChoice(0, 2);
 }
 
 std::string OrderView::promptRejectNote() {
