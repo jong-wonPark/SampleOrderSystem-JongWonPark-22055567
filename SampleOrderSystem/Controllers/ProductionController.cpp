@@ -30,15 +30,17 @@ void ProductionController::handleShip() {
     ProductionView::showConfirmedOrders(confirmed);
     if (confirmed.empty()) return;
 
-    auto numStr = ProductionView::promptShipOrderNumber();
-    if (numStr == "0" || numStr.empty()) return;
+    int sel = ProductionView::promptSelectShipOrder((int)confirmed.size());
+    if (sel == 0) return;
 
-    if (!prodSvc_.shipOrder(numStr)) {
-        MainMenuView::showError("출고 실패. CONFIRMED 상태의 주문번호인지 확인하세요.");
+    const std::string& orderNum = confirmed[sel - 1].order_number;
+
+    if (!prodSvc_.shipOrder(orderNum)) {
+        MainMenuView::showError("출고 처리 실패.");
         return;
     }
 
-    auto updated = ordSvc_.findByOrderNumber(numStr);
+    auto updated = ordSvc_.findByOrderNumber(orderNum);
     if (updated.has_value())
         ProductionView::showShipResult(*updated);
 }
@@ -60,21 +62,25 @@ void ProductionController::handleCompleteProduction() {
     auto queue = prodSvc_.getQueue();
     ProductionView::showProductionQueue(queue);
 
-    auto prodId = ProductionView::promptCompleteProductionId();
-    if (prodId == "0" || prodId.empty()) return;
-
-    // complete 후 큐에서 사라지므로 order_number를 미리 추출
-    std::string orderNum;
+    // InProduction 항목만 선택 대상
+    std::vector<ProductionQueueItem> inProd;
     for (const auto& p : queue)
-        if (p.production_id == prodId) { orderNum = p.order_number; break; }
+        if (p.status == ProductionQueueStatus::InProduction) inProd.push_back(p);
 
-    if (orderNum.empty()) {
-        MainMenuView::showError("생산ID를 찾을 수 없습니다: " + prodId);
+    if (inProd.empty()) {
+        MainMenuView::showError("생산 중인 항목이 없습니다.");
         return;
     }
 
+    int sel = ProductionView::promptSelectInProduction((int)inProd.size());
+    if (sel == 0) return;
+
+    // complete 후 큐에서 사라지므로 production_id·order_number 미리 추출
+    const std::string& prodId   = inProd[sel - 1].production_id;
+    const std::string& orderNum = inProd[sel - 1].order_number;
+
     if (!prodSvc_.completeProduction(prodId)) {
-        MainMenuView::showError("생산 완료 실패. InProduction 상태인지 확인하세요.");
+        MainMenuView::showError("생산 완료 처리 실패.");
         return;
     }
 

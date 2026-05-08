@@ -29,8 +29,17 @@ void ProductionView::showConfirmedOrders(const std::vector<Order>& orders) {
     V::printLine('-');
 }
 
-std::string ProductionView::promptShipOrderNumber() {
-    return MainMenuView::prompt("출고할 주문번호 (0: 취소)");
+int ProductionView::promptSelectShipOrder(int count) {
+    std::cout << "\n출고할 번호를 선택하세요 (0: 취소): ";
+    std::string line;
+    std::getline(std::cin, line);
+    try {
+        int val = std::stoi(line);
+        if (val >= 0 && val <= count) return val;
+    } catch (...) {}
+    MainMenuView::showError("1~" + std::to_string(count) + " 또는 0을 입력하세요.");
+    return MainMenuView::promptChoice(0, count,
+        "1~" + std::to_string(count) + " 또는 0을 입력하세요.");
 }
 
 void ProductionView::showShipResult(const Order& order) {
@@ -66,14 +75,17 @@ void ProductionView::showProductionQueue(
     } else {
         V::printLine('-');
         std::cout << "  "
-                  << V::padRight("생산ID", 19)   << "  "
-                  << V::padRight("주문번호", 18)  << "  "
-                  << V::padRight("시료명", 14)    << "  "
-                  << V::padLeft("수량", 4)        << "  "
+                  << V::padLeft("번호", 4)        << "  "
+                  << V::padRight("생산ID", 19)     << "  "
+                  << V::padRight("주문번호", 18)   << "  "
+                  << V::padRight("시료명", 14)     << "  "
+                  << V::padLeft("수량", 4)         << "  "
                   << "시작 시각\n";
         V::printLine('-');
-        for (const auto& p : inProd) {
+        for (int i = 0; i < (int)inProd.size(); ++i) {
+            const auto& p = inProd[i];
             std::cout << "  "
+                      << V::padLeft(std::to_string(i + 1), 4) << "  "
                       << Clr::BrYellow
                       << V::padRight(V::truncate(p.production_id, 19), 19)
                       << Clr::Reset << "  "
@@ -120,8 +132,17 @@ void ProductionView::showStartResult(const ProductionQueueItem& item) {
               << " 상태로 전환되었습니다.\n";
 }
 
-std::string ProductionView::promptCompleteProductionId() {
-    return MainMenuView::prompt("생산 완료할 생산ID (0: 취소)");
+int ProductionView::promptSelectInProduction(int count) {
+    std::cout << "\n완료할 번호를 선택하세요 (0: 취소): ";
+    std::string line;
+    std::getline(std::cin, line);
+    try {
+        int val = std::stoi(line);
+        if (val >= 0 && val <= count) return val;
+    } catch (...) {}
+    MainMenuView::showError("1~" + std::to_string(count) + " 또는 0을 입력하세요.");
+    return MainMenuView::promptChoice(0, count,
+        "1~" + std::to_string(count) + " 또는 0을 입력하세요.");
 }
 
 void ProductionView::showCompleteResult(const Order& confirmedOrder) {
