@@ -14,5 +14,6 @@ public:
 private:
     static void showOrderSummary(const std::vector<Order>& orders);
     static void showInventoryTable(const std::vector<SampleItem>&    samples,
-                                   const std::vector<InventoryItem>& inventory);
+                                   const std::vector<InventoryItem>& inventory,
+                                   const std::vector<Order>&         orders);
 };
