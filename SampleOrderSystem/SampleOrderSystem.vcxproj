@@ -137,6 +137,14 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Persistence\DataPersistence.cpp" />
+    <ClCompile Include="Repositories\InventoryRepository.cpp" />
+    <ClCompile Include="Repositories\OrderRepository.cpp" />
+    <ClCompile Include="Repositories\ProductionQueueRepository.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Repositories\InventoryRepository.h" />
+    <ClInclude Include="Repositories\OrderRepository.h" />
+    <ClInclude Include="Repositories\ProductionQueueRepository.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Models\Enums.h" />

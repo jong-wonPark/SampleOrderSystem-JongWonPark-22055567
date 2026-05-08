@@ -1,28 +1,11 @@
 #include <gtest/gtest.h>
 
-#include <atomic>
 #include <filesystem>
-#include <string>
 
 #include "Persistence/DataPersistence.h"
+#include "TestHelpers.h"
 
 namespace fs = std::filesystem;
-
-// ── 임시 디렉토리 헬퍼 (각 테스트마다 격리된 파일 공간) ──────────
-
-class TempDir {
-    fs::path path_;
-    static std::atomic<int> counter_;
-public:
-    TempDir() {
-        path_ = fs::temp_directory_path() /
-                ("sos_test_" + std::to_string(++counter_));
-        fs::create_directories(path_);
-    }
-    ~TempDir() { std::error_code ec; fs::remove_all(path_, ec); }
-    fs::path file(const std::string& name) const { return path_ / name; }
-};
-std::atomic<int> TempDir::counter_{0};
 
 
 // ════════════════════════════════════════════════════════════════
