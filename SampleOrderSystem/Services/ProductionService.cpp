@@ -28,7 +28,6 @@ bool ProductionService::startNextProduction() {
     auto front = queueRepo_.getFront();
     if (!front.has_value()) return false;
     try {
-        // 실제 시작 시점의 재고로 생산량 재계산 (FIFO 순서 보장)
         auto order = orderRepo_.findByOrderNumber(front->order_number);
         if (!order.has_value()) return false;
 
@@ -38,13 +37,24 @@ bool ProductionService::startNextProduction() {
 
         int shortage = std::max(0, order->order_quantity - current_stock);
 
+        // shortage=0: 재고 충분 → InProduction 없이 즉시 CONFIRMED
+        // (total_time=0 → estimated_completion=now → 즉시 자동완료 버그 방지)
+        if (shortage == 0) {
+            queueRepo_.cancel(front->production_id);  // Waiting 상태 제거
+            inventoryService_.deductStock(front->sample_id, order->order_quantity);
+            orderRepo_.updateStatus(front->order_number, OrderStatus::CONFIRMED);
+            return true;
+        }
+
+        // shortage > 0: 실제 생산 필요 — 시작 시점 재고로 생산량 재계산
         double yield_rate = 1.0, avg_time_h = 0.0;
         if (auto sample = inventoryService_.findSampleById(front->sample_id)) {
             yield_rate = sample->yield_rate;
             avg_time_h = sample->avg_production_time_hours;
         }
-        int    planned_qty = (shortage > 0)
-            ? static_cast<int>(std::ceil(shortage / (yield_rate * 0.9))) : 0;
+        if (avg_time_h <= 0.0) avg_time_h = 1.0 / 60.0;  // 최소 1분 방어
+
+        int    planned_qty = static_cast<int>(std::ceil(shortage / (yield_rate * 0.9)));
         double total_time  = planned_qty * avg_time_h;
 
         queueRepo_.start_with_quantities(front->production_id, planned_qty, total_time);

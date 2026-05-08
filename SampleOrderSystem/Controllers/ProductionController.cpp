@@ -16,43 +16,41 @@ void ProductionController::runShipping() {
 }
 
 void ProductionController::runProduction() {
-    while (true) {
-        MainMenuView::printHeader("생산 라인");
-
-        // 완료 예정 시간이 지난 InProduction 항목 자동 완료
-        auto completedOrders = prodSvc_.autoCompleteExpired();
-        for (const auto& orderNum : completedOrders) {
-            auto order = ordSvc_.findByOrderNumber(orderNum);
-            if (order.has_value())
-                ProductionView::showCompleteResult(*order);
-        }
-        if (!completedOrders.empty())
-            MainMenuView::pause();
-
-        // 현재 처리 중인 내역 + 대기 중인 내역 표시
-        auto queue = prodSvc_.getQueue();
-        ProductionView::showProductionQueue(queue);
-
-        // 대기 항목 존재 여부로 옵션 결정
-        bool hasWaiting = std::any_of(queue.begin(), queue.end(),
-            [](const ProductionQueueItem& p) {
-                return p.status == ProductionQueueStatus::Waiting;
-            });
-
-        std::cout << "\n";
-        if (hasWaiting)
-            std::cout << "  1. 생산 시작  (Waiting → InProduction)\n";
-        std::cout << "  0. 뒤로\n\n";
-        MainMenuView::printLine();
-
-        int choice = MainMenuView::promptChoice(0, hasWaiting ? 1 : 0);
-        if (choice == 0) break;
-
-        MainMenuView::clearScreen();
-        handleStartProduction();
-        MainMenuView::pause();
-        MainMenuView::clearScreen();
+    // 1. 완료 예정 시간이 지난 InProduction 항목 자동 완료
+    for (const auto& orderNum : prodSvc_.autoCompleteExpired()) {
+        auto order = ordSvc_.findByOrderNumber(orderNum);
+        if (order.has_value())
+            ProductionView::showCompleteResult(*order);
     }
+
+    // 2. InProduction이 없으면 대기 항목 자동 처리
+    //    shortage=0인 항목은 즉시 CONFIRMED 처리하고 다음 항목으로 진행
+    {
+        auto queue = prodSvc_.getQueue();
+        bool hasInProd = std::any_of(queue.begin(), queue.end(),
+            [](const ProductionQueueItem& p) {
+                return p.status == ProductionQueueStatus::InProduction; });
+
+        if (!hasInProd) {
+            while (prodSvc_.startNextProduction()) {
+                auto cur = prodSvc_.getCurrentProduction();
+                if (cur.has_value()) {
+                    // 실제 생산 시작됨
+                    ProductionView::showStartResult(*cur);
+                    break;
+                }
+                // shortage=0이었으므로 즉시 CONFIRMED — 다음 항목 처리 시도
+            }
+        }
+    }
+
+    // 3. 현재 처리 중인 내역 + 대기 중인 내역 표시
+    MainMenuView::printHeader("생산 라인");
+    ProductionView::showProductionQueue(prodSvc_.getQueue());
+
+    // 4. Enter → 뒤로가기
+    std::cout << "\n";
+    MainMenuView::pause();
 }
 
 void ProductionController::handleShip() {
@@ -73,15 +71,4 @@ void ProductionController::handleShip() {
     auto updated = ordSvc_.findByOrderNumber(orderNum);
     if (updated.has_value())
         ProductionView::showShipResult(*updated);
-}
-
-void ProductionController::handleStartProduction() {
-    if (!prodSvc_.startNextProduction()) {
-        MainMenuView::showError("대기 중인 생산 항목이 없습니다.");
-        return;
-    }
-
-    auto current = prodSvc_.getCurrentProduction();
-    if (current.has_value())
-        ProductionView::showStartResult(*current);
 }
