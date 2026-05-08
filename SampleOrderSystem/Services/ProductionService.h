@@ -34,6 +34,10 @@ public:
     // 메뉴 5: 출고 처리 (CONFIRMED → RELEASE)
     bool shipOrder(const std::string& order_number);
 
+    // 완료 예정 시간이 지난 InProduction 항목을 자동 완료 (CONFIRMED 전이)
+    // 반환: 완료 처리된 주문번호 목록
+    std::vector<std::string> autoCompleteExpired();
+
     // 조회 (메뉴 6 화면용)
     std::vector<ProductionQueueItem>   getQueue() const;
     std::optional<ProductionQueueItem> getCurrentProduction() const;

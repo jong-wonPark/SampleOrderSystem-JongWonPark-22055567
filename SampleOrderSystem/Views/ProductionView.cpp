@@ -79,16 +79,6 @@ void ProductionView::showShipResult(const Order& order) {
 
 // ── 메뉴 6: 생산 라인 ────────────────────────────────────────────────
 
-int ProductionView::promptProductionSubMenu() {
-    MainMenuView::printHeader("생산 라인");
-    std::cout << "\n"
-              << "  1. 생산 시작  (Waiting → InProduction)\n"
-              << "  2. 생산 완료  (InProduction → CONFIRMED)\n"
-              << "  0. 뒤로\n\n";
-    MainMenuView::printLine();
-    return MainMenuView::promptChoice(0, 2);
-}
-
 void ProductionView::showProductionQueue(
     const std::vector<ProductionQueueItem>& queue)
 {
@@ -177,19 +167,6 @@ void ProductionView::showProductionQueue(
         }
         V::printLine('-');
     }
-}
-
-int ProductionView::promptSelectInProduction(int count) {
-    std::cout << "\n완료할 번호를 선택하세요 (0: 취소): ";
-    std::string line;
-    std::getline(std::cin, line);
-    try {
-        int val = std::stoi(line);
-        if (val >= 0 && val <= count) return val;
-    } catch (...) {}
-    MainMenuView::showError("1~" + std::to_string(count) + " 또는 0을 입력하세요.");
-    return MainMenuView::promptChoice(0, count,
-        "1~" + std::to_string(count) + " 또는 0을 입력하세요.");
 }
 
 void ProductionView::showStartResult(const ProductionQueueItem& item) {

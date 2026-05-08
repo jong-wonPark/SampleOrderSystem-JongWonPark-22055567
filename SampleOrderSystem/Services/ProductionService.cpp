@@ -1,5 +1,8 @@
 #include "ProductionService.h"
 
+#include <cstdio>
+#include <ctime>
+
 ProductionService::ProductionService(
     ProductionQueueRepository& queueRepo,
     OrderRepository&           orderRepo,
@@ -66,4 +69,31 @@ std::optional<ProductionQueueItem> ProductionService::getCurrentProduction() con
     for (const auto& p : queueRepo_.findAll())
         if (p.status == ProductionQueueStatus::InProduction) return p;
     return std::nullopt;
+}
+
+std::vector<std::string> ProductionService::autoCompleteExpired() {
+    // 스냅샷으로 순회 (completeProduction이 큐를 수정하므로)
+    auto snapshot = queueRepo_.findAll();
+    auto now      = std::time(nullptr);
+
+    std::vector<std::string> completedOrderNums;
+    for (const auto& p : snapshot) {
+        if (p.status != ProductionQueueStatus::InProduction) continue;
+        if (p.estimated_completion.empty()) continue;
+
+        int y, mo, d, h, mi, s;
+        if (sscanf_s(p.estimated_completion.c_str(), "%d-%d-%dT%d:%d:%d",
+                     &y, &mo, &d, &h, &mi, &s) != 6) continue;
+        std::tm tm{};
+        tm.tm_year = y-1900; tm.tm_mon = mo-1; tm.tm_mday = d;
+        tm.tm_hour = h; tm.tm_min = mi; tm.tm_sec = s;
+        tm.tm_isdst = -1;
+
+        if (now >= std::mktime(&tm)) {
+            std::string orderNum = p.order_number;
+            if (completeProduction(p.production_id))
+                completedOrderNums.push_back(orderNum);
+        }
+    }
+    return completedOrderNums;
 }
