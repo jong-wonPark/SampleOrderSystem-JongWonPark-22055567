@@ -449,6 +449,44 @@ ProductionQueueItem ProductionQueueManager::start(const std::string& production_
     throw std::out_of_range("Unknown production_id: " + production_id);
 }
 
+ProductionQueueItem ProductionQueueManager::start_with_quantities(
+    const std::string& production_id,
+    int    planned_qty,
+    double total_production_time_hours)
+{
+    json arr = load();
+    for (auto& j_item : arr) {
+        if (j_item.at("production_id").get<std::string>() != production_id) continue;
+        if (productionQueueStatusFromJson(j_item.at("status").get<std::string>())
+                != ProductionQueueStatus::Waiting)
+            throw std::runtime_error(
+                "Cannot start: not Waiting. production_id=" + production_id);
+
+        // 재계산된 생산량으로 업데이트
+        j_item["planned_quantity"]            = planned_qty;
+        j_item["total_production_time_hours"] = total_production_time_hours;
+        j_item["status"]                      = toJsonString(ProductionQueueStatus::InProduction);
+        j_item["started_at"]                  = now_iso8601();
+
+        // 완료 예정 시각
+        {
+            auto est_t = std::time(nullptr)
+                         + static_cast<std::time_t>(total_production_time_hours * 3600.0);
+            std::tm est_tm{};
+            localtime_s(&est_tm, &est_t);
+            std::ostringstream oss;
+            oss << std::put_time(&est_tm, "%Y-%m-%dT%H:%M:%S");
+            j_item["estimated_completion"] = oss.str();
+        }
+
+        save(arr);
+        ProductionQueueItem p;
+        from_json(j_item, p);
+        return p;
+    }
+    throw std::out_of_range("Unknown production_id: " + production_id);
+}
+
 ProductionQueueItem ProductionQueueManager::complete(const std::string& production_id) {
     json arr = load();
     for (auto it = arr.begin(); it != arr.end(); ++it) {

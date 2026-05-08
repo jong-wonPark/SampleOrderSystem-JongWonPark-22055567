@@ -385,13 +385,17 @@ void DataMonitor::show_inventory(const MonitorSnapshot& snap) const {
                     qty = inv.quantity; unit = inv.unit; updated = inv.last_updated; break;
                 }
             }
-            // 재고 상태: RESERVED 주문 기준
+            // 재고 상태: 큐 존재 여부 + RESERVED 주문 기준
+            bool hasQueue = false;
+            for (const auto& p : snap.queue)
+                if (p.sample_id == s.sample_id) { hasQueue = true; break; }
             int pending = 0;
             for (const auto& o : snap.orders)
                 if (o.sample_id == s.sample_id && o.status == OrderStatus::RESERVED)
                     pending += o.order_quantity;
-            std::string status = (qty == 0) ? "고갈"
-                               : (pending > qty) ? "부족" : "여유";
+            std::string status = (qty == 0)        ? "고갈"
+                               : hasQueue          ? "부족"
+                               : (pending > qty)   ? "부족" : "여유";
             const char* sc = (status == "고갈") ? Clr::BrRed
                            : (status == "부족") ? Clr::BrYellow
                            : Clr::BrGreen;

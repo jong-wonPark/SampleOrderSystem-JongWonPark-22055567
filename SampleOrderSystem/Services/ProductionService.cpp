@@ -1,5 +1,6 @@
 #include "ProductionService.h"
 
+#include <cmath>
 #include <cstdio>
 #include <ctime>
 
@@ -27,7 +28,26 @@ bool ProductionService::startNextProduction() {
     auto front = queueRepo_.getFront();
     if (!front.has_value()) return false;
     try {
-        queueRepo_.start(front->production_id);
+        // 실제 시작 시점의 재고로 생산량 재계산 (FIFO 순서 보장)
+        auto order = orderRepo_.findByOrderNumber(front->order_number);
+        if (!order.has_value()) return false;
+
+        int current_stock = 0;
+        if (auto inv = inventoryService_.getStock(front->sample_id))
+            current_stock = inv->quantity;
+
+        int shortage = std::max(0, order->order_quantity - current_stock);
+
+        double yield_rate = 1.0, avg_time_h = 0.0;
+        if (auto sample = inventoryService_.findSampleById(front->sample_id)) {
+            yield_rate = sample->yield_rate;
+            avg_time_h = sample->avg_production_time_hours;
+        }
+        int    planned_qty = (shortage > 0)
+            ? static_cast<int>(std::ceil(shortage / (yield_rate * 0.9))) : 0;
+        double total_time  = planned_qty * avg_time_h;
+
+        queueRepo_.start_with_quantities(front->production_id, planned_qty, total_time);
         return true;
     } catch (...) { return false; }
 }

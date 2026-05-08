@@ -130,6 +130,10 @@ public:
     // ── Update ────────────────────────────────────────────────────
     // Waiting → InProduction (Waiting 아니면 std::runtime_error)
     ProductionQueueItem start(const std::string& production_id);
+    // 생산량을 재계산한 후 start: planned_qty·total_time을 갱신하고 InProduction으로 전환
+    ProductionQueueItem start_with_quantities(const std::string& production_id,
+                                              int    planned_qty,
+                                              double total_production_time_hours);
     // InProduction → 큐에서 제거 후 반환 (InProduction 아니면 std::runtime_error)
     ProductionQueueItem complete(const std::string& production_id);
 

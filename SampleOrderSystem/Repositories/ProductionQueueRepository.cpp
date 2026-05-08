@@ -55,6 +55,18 @@ ProductionQueueItem ProductionQueueRepository::start(
     return updated;
 }
 
+ProductionQueueItem ProductionQueueRepository::start_with_quantities(
+    const std::string& production_id,
+    int    planned_qty,
+    double total_production_time_hours)
+{
+    ProductionQueueItem updated = mgr_.start_with_quantities(
+        production_id, planned_qty, total_production_time_hours);
+    for (auto& p : queue_)
+        if (p.production_id == production_id) { p = updated; break; }
+    return updated;
+}
+
 ProductionQueueItem ProductionQueueRepository::dequeue(
     const std::string& production_id)
 {

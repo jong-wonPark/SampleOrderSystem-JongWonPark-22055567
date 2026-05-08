@@ -29,6 +29,10 @@ public:
     // ── Update ────────────────────────────────────────────────────
     // Waiting → InProduction
     ProductionQueueItem start(const std::string& production_id);
+    // 생산량 재계산 후 InProduction 전환
+    ProductionQueueItem start_with_quantities(const std::string& production_id,
+                                              int    planned_qty,
+                                              double total_production_time_hours);
 
     // ── Delete + Return ───────────────────────────────────────────
     // 생산 완료: 큐에서 제거 후 항목 반환

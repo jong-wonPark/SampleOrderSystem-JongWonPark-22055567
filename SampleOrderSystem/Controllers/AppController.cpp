@@ -15,7 +15,7 @@ AppController::AppController()
     , ordSvc_   (ordRepo_,   invSvc_, prodSvc_)
     , sampleCtrl_     (invSvc_)
     , orderCtrl_      (ordSvc_, invSvc_)
-    , monitoringCtrl_ (ordSvc_, invSvc_)
+    , monitoringCtrl_ (ordSvc_, invSvc_, prodSvc_)
     , productionCtrl_ (prodSvc_, ordSvc_)
 {}
 

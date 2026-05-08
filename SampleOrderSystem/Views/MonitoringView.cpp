@@ -4,13 +4,23 @@
 #include <iomanip>
 #include <sstream>
 
-// RESERVED 주문 기준 해당 시료의 재고 상태 반환
-// CONFIRMED은 승인 시 이미 재고가 차감되었으므로 제외
+// 해당 시료의 재고 상태 반환
+// 판단 기준 (우선순위 순):
+//   고갈: 재고 == 0
+//   부족: 생산 큐에 동일 시료 항목 존재 (앞선 주문이 재고를 사용 중)
+//         OR RESERVED 주문 합계 > 재고
+//   여유: 그 외
 static std::string stockStatus(const std::string& sample_id, int qty,
-                                const std::vector<Order>& orders)
+                                const std::vector<Order>& orders,
+                                const std::vector<ProductionQueueItem>& queue)
 {
     if (qty == 0) return "고갈";
 
+    // 동일 시료에 생산 큐 항목이 있으면 부족 (앞선 주문이 재고 선점)
+    for (const auto& p : queue)
+        if (p.sample_id == sample_id) return "부족";
+
+    // RESERVED 주문 합계 vs 재고
     int pending = 0;
     for (const auto& o : orders)
         if (o.sample_id == sample_id && o.status == OrderStatus::RESERVED)
@@ -51,9 +61,10 @@ void MonitoringView::showOrderSummary(const std::vector<Order>& orders) {
     std::cout << "  " << V::padRight("합계", 26) << ":  " << orders.size() << "건\n";
 }
 
-void MonitoringView::showInventoryTable(const std::vector<SampleItem>&    samples,
-                                         const std::vector<InventoryItem>& inventory,
-                                         const std::vector<Order>&         orders)
+void MonitoringView::showInventoryTable(const std::vector<SampleItem>&          samples,
+                                         const std::vector<InventoryItem>&       inventory,
+                                         const std::vector<Order>&               orders,
+                                         const std::vector<ProductionQueueItem>& queue)
 {
     using V = MainMenuView;
     std::cout << "\n[재고 현황]\n";
@@ -74,7 +85,7 @@ void MonitoringView::showInventoryTable(const std::vector<SampleItem>&    sample
         for (const auto& inv : inventory)
             if (inv.sample_id == s.sample_id) { qty = inv.quantity; unit = inv.unit; break; }
 
-        std::string status = stockStatus(s.sample_id, qty, orders);
+        std::string status = stockStatus(s.sample_id, qty, orders, queue);
         const char* sc = stockStatusColor(status);
 
         const char* qc = (qty == 0) ? Clr::BrRed
@@ -97,13 +108,14 @@ void MonitoringView::showInventoryTable(const std::vector<SampleItem>&    sample
               << Clr::BrRed    << "고갈" << Clr::Reset << ": 수량 0\n";
 }
 
-void MonitoringView::showDashboard(const std::vector<Order>&         orders,
-                                    const std::vector<SampleItem>&    samples,
-                                    const std::vector<InventoryItem>& inventory)
+void MonitoringView::showDashboard(const std::vector<Order>&               orders,
+                                    const std::vector<SampleItem>&          samples,
+                                    const std::vector<InventoryItem>&       inventory,
+                                    const std::vector<ProductionQueueItem>& queue)
 {
     MainMenuView::printHeader("모니터링");
     std::cout << '\n';
     showOrderSummary(orders);
-    showInventoryTable(samples, inventory, orders);
+    showInventoryTable(samples, inventory, orders, queue);
     MainMenuView::printLine('-');
 }
