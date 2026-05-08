@@ -6,4 +6,5 @@
   <Project Path="SampleOrderSystem/SampleOrderSystem.vcxproj" Id="5373aa2e-bc3b-4702-aadb-442fa1a74f0e" />
   <Project Path="Tests/SampleOrderSystemTests.vcxproj" Id="a2b3c4d5-0001-0001-0001-000000000001" />
   <Project Path="DummyDataGenerator/DummyDataGenerator.vcxproj" Id="b3c4d5e6-0001-0001-0001-000000000001" />
+  <Project Path="DataMonitor/DataMonitor.vcxproj" Id="c4d5e6f7-0001-0001-0001-000000000001" />
 </Solution>
