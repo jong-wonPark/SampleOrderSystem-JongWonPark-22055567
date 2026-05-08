@@ -1,5 +1,5 @@
-#include <iostream>
 #include <windows.h>
+#include "Controllers/AppController.h"
 
 int main() {
     SetConsoleCP(CP_UTF8);
@@ -11,11 +11,7 @@ int main() {
     GetConsoleMode(hOut, &dwMode);
     SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
-    std::cout << "s-semi 시료 관리 시스템 시작" << std::endl;
-
-    // AppController는 Phase 6에서 연결
-    // AppController app;
-    // app.run();
-
+    AppController app;
+    app.run();
     return 0;
 }
