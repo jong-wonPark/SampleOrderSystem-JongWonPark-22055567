@@ -38,4 +38,5 @@ private:
     ProductionController  productionCtrl_;
 
     void handleMenuChoice(int choice);
+    void checkProductionOnStartup(); // 시작 시 완료된 생산 자동 처리
 };
