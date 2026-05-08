@@ -18,9 +18,13 @@ public:
     static void showPlaceOrderResult(const Order& order);
 
     // 메뉴 3: 승인/거절
-    static int         promptApprovalSubMenu();  // 1:승인 2:거절 0:뒤로
-    static void        showReservedOrders(const std::vector<Order>& orders);
-    static std::string promptOrderNumber(const std::string& action);
+    static void showReservedOrders(const std::vector<Order>& orders);
+    // 목록에서 번호로 선택 (1~count, 0=뒤로)
+    static int  promptSelectOrder(int count);
+    // 선택된 주문 요약 표시
+    static void showSelectedOrder(const Order& order);
+    // 1.승인 / 2.거절 / 0.뒤로
+    static int  promptApproveOrReject();
     static std::string promptRejectNote();
     static void showApproveResult(const Order& order);
     static void showRejectResult(const Order& order);

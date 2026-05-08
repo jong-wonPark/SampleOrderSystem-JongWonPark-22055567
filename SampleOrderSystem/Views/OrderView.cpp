@@ -22,25 +22,6 @@ void OrderView::showPlaceOrderResult(const Order& order) {
               << "  상태     : " << MainMenuView::colorStatus(order.status) << "\n";
 }
 
-int OrderView::promptApprovalSubMenu() {
-    MainMenuView::printHeader("주문 승인/거절");
-    std::cout << "\n"
-              << "  1. 승인\n"
-              << "  2. 거절\n"
-              << "  0. 뒤로\n\n";
-    MainMenuView::printLine();
-    while (true) {
-        std::cout << "선택: ";
-        std::string line;
-        std::getline(std::cin, line);
-        try {
-            int val = std::stoi(line);
-            if (val >= 0 && val <= 2) return val;
-        } catch (...) {}
-        MainMenuView::showError("0~2 중 하나를 입력하세요.");
-    }
-}
-
 void OrderView::showReservedOrders(const std::vector<Order>& orders) {
     using V = MainMenuView;
     std::cout << "\n[검토 대기 주문 목록 (RESERVED)]\n";
@@ -70,8 +51,47 @@ void OrderView::showReservedOrders(const std::vector<Order>& orders) {
     V::printLine('-');
 }
 
-std::string OrderView::promptOrderNumber(const std::string& action) {
-    return MainMenuView::prompt(action + "할 주문번호 (0: 취소)");
+int OrderView::promptSelectOrder(int count) {
+    while (true) {
+        std::cout << "\n처리할 번호를 선택하세요 (0: 뒤로): ";
+        std::string line;
+        std::getline(std::cin, line);
+        try {
+            int val = std::stoi(line);
+            if (val >= 0 && val <= count) return val;
+        } catch (...) {}
+        MainMenuView::showError("1~" + std::to_string(count) + " 또는 0을 입력하세요.");
+    }
+}
+
+void OrderView::showSelectedOrder(const Order& order) {
+    using V = MainMenuView;
+    std::cout << "\n[선택된 주문]\n";
+    V::printLine('-');
+    std::cout << "  주문번호 : " << order.order_number  << "\n"
+              << "  시료     : " << order.sample_name   << "\n"
+              << "  고객     : " << order.customer_name << "\n"
+              << "  수량     : " << order.order_quantity << " EA\n"
+              << "  접수일시 : " << order.order_date     << "\n";
+    V::printLine('-');
+}
+
+int OrderView::promptApproveOrReject() {
+    std::cout << "\n"
+              << "  1. 승인\n"
+              << "  2. 거절\n"
+              << "  0. 뒤로\n\n";
+    MainMenuView::printLine();
+    while (true) {
+        std::cout << "선택: ";
+        std::string line;
+        std::getline(std::cin, line);
+        try {
+            int val = std::stoi(line);
+            if (val >= 0 && val <= 2) return val;
+        } catch (...) {}
+        MainMenuView::showError("0~2 중 하나를 입력하세요.");
+    }
 }
 
 std::string OrderView::promptRejectNote() {

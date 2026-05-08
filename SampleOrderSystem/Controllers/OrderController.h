@@ -11,6 +11,4 @@ private:
     OrderService&     ordSvc_;
     InventoryService& invSvc_;
     void handlePlaceOrder();
-    void handleApprove();
-    void handleReject();
 };

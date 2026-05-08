@@ -14,12 +14,47 @@ void OrderController::runPlaceOrder() {
 
 void OrderController::runApproval() {
     while (true) {
-        int choice = OrderView::promptApprovalSubMenu();
-        if (choice == 0) break;
+        // 1. 헤더 + RESERVED 주문 목록 표시
+        MainMenuView::printHeader("주문 승인/거절");
+        auto reserved = ordSvc_.getOrdersByStatus(OrderStatus::RESERVED);
+        OrderView::showReservedOrders(reserved);
+
+        if (reserved.empty()) {
+            MainMenuView::pause();
+            break;
+        }
+
+        // 2. 번호로 주문 선택
+        int sel = OrderView::promptSelectOrder((int)reserved.size());
+        if (sel == 0) break;
+
+        const Order& order = reserved[sel - 1];
+
+        // 3. 선택된 주문 상세 + 승인/거절 선택
         MainMenuView::clearScreen();
-        switch (choice) {
-            case 1: handleApprove(); break;
-            case 2: handleReject();  break;
+        OrderView::showSelectedOrder(order);
+        int action = OrderView::promptApproveOrReject();
+        if (action == 0) continue;  // 목록으로 돌아가기
+
+        // 4. 처리
+        MainMenuView::clearScreen();
+        if (action == 1) {
+            if (!ordSvc_.approveOrder(order.order_number)) {
+                MainMenuView::showError("승인 실패. 이미 처리된 주문일 수 있습니다.");
+            } else {
+                auto updated = ordSvc_.findByOrderNumber(order.order_number);
+                if (updated.has_value())
+                    OrderView::showApproveResult(*updated);
+            }
+        } else {
+            auto note = OrderView::promptRejectNote();
+            if (!ordSvc_.rejectOrder(order.order_number, note)) {
+                MainMenuView::showError("거절 실패. 이미 처리된 주문일 수 있습니다.");
+            } else {
+                auto updated = ordSvc_.findByOrderNumber(order.order_number);
+                if (updated.has_value())
+                    OrderView::showRejectResult(*updated);
+            }
         }
         MainMenuView::pause();
     }
@@ -38,42 +73,4 @@ void OrderController::handlePlaceOrder() {
         input.sample_id, sample->sample_name,
         input.customer_name, input.order_quantity);
     OrderView::showPlaceOrderResult(order);
-}
-
-void OrderController::handleApprove() {
-    auto reserved = ordSvc_.getOrdersByStatus(OrderStatus::RESERVED);
-    OrderView::showReservedOrders(reserved);
-    if (reserved.empty()) return;
-
-    auto numStr = OrderView::promptOrderNumber("승인");
-    if (numStr == "0" || numStr.empty()) return;
-
-    if (!ordSvc_.approveOrder(numStr)) {
-        MainMenuView::showError("승인 실패. RESERVED 상태의 주문번호인지 확인하세요.");
-        return;
-    }
-
-    auto updated = ordSvc_.findByOrderNumber(numStr);
-    if (updated.has_value())
-        OrderView::showApproveResult(*updated);
-}
-
-void OrderController::handleReject() {
-    auto reserved = ordSvc_.getOrdersByStatus(OrderStatus::RESERVED);
-    OrderView::showReservedOrders(reserved);
-    if (reserved.empty()) return;
-
-    auto numStr = OrderView::promptOrderNumber("거절");
-    if (numStr == "0" || numStr.empty()) return;
-
-    auto note = OrderView::promptRejectNote();
-
-    if (!ordSvc_.rejectOrder(numStr, note)) {
-        MainMenuView::showError("거절 실패. RESERVED 상태의 주문번호인지 확인하세요.");
-        return;
-    }
-
-    auto updated = ordSvc_.findByOrderNumber(numStr);
-    if (updated.has_value())
-        OrderView::showRejectResult(*updated);
 }
