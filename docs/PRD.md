@@ -357,6 +357,8 @@ bool   addStock(sample_id, quantity);
 ## 10. 구현 단계 (Phase별 순서)
 
 ### Phase 0 — 프로젝트 기반 설정
+> 상세 설계: [phase0-design.md](phase0-design.md)
+
 **목표**: 빌드 환경 구성, 외부 라이브러리 통합
 
 1. `include/nlohmann/json.hpp` 배치 (v3.11.3)
@@ -367,6 +369,8 @@ bool   addStock(sample_id, quantity);
 ---
 
 ### Phase 1 — Model 계층
+> 상세 설계: [phase1-design.md](phase1-design.md)
+
 **목표**: 모든 데이터 구조 정의. 이 단계 이후 전체 계층이 타입을 공유한다.
 
 1. `Models/Enums.h`
@@ -380,6 +384,8 @@ bool   addStock(sample_id, quantity);
 ---
 
 ### Phase 2 — Persistence 계층 (DataPersistence 패턴)
+> 상세 설계: [phase2-design.md](phase2-design.md)
+
 **목표**: JSON 파일 ↔ 구조체 직렬화/역직렬화 구현
 
 1. `Persistence/DataPersistence.h` — Manager 클래스 3개 선언
@@ -399,6 +405,8 @@ bool   addStock(sample_id, quantity);
 ---
 
 ### Phase 3 — Repository 계층
+> 상세 설계: [phase3-design.md](phase3-design.md)
+
 **목표**: Persistence 위에서 인메모리 CRUD + 필터 쿼리 제공
 
 1. `Repositories/InventoryRepository.h/.cpp`
@@ -415,6 +423,8 @@ bool   addStock(sample_id, quantity);
 ---
 
 ### Phase 4 — Service 계층
+> 상세 설계: [phase4-design.md](phase4-design.md)
+
 **목표**: 핵심 비즈니스 로직 및 상태 전이 구현
 
 1. `Services/InventoryService.h/.cpp`
@@ -438,6 +448,8 @@ bool   addStock(sample_id, quantity);
 ---
 
 ### Phase 5 — View 계층
+> 상세 설계: [phase5-design.md](phase5-design.md)
+
 **목표**: 콘솔 입출력 UI. 비즈니스 로직 없이 표시·입력만.  
 **구현 메뉴**: 모든 메뉴의 화면 출력 담당
 
@@ -462,6 +474,8 @@ bool   addStock(sample_id, quantity);
 ---
 
 ### Phase 6 — Controller 계층
+> 상세 설계: [phase6-design.md](phase6-design.md)
+
 **목표**: 입력→서비스→뷰 파이프라인 연결. Repository 직접 호출 금지.
 
 1. `Controllers/SampleController.h/.cpp` — **메뉴 1: 시료 관리**
@@ -549,15 +563,13 @@ bool   addStock(sample_id, quantity);
 
 ## 12. 구현 순서 요약 (체크리스트)
 
-```
-Phase 0  [ ] 프로젝트 기반 설정 (빌드 환경, nlohmann/json, data/ 초기 파일)
-Phase 1  [ ] Model 계층 (Enums, SampleItem, InventoryItem, Order, ProductionQueueItem)
-Phase 2  [ ] Persistence 계층 (DataPersistence.h/.cpp, Manager 3종, JSON 직렬화)
-Phase 3  [ ] Repository 계층 (Inventory/Order/ProductionQueueRepository)
-Phase 4  [ ] Service 계층 (Inventory/Order/ProductionService, 상태 전이 로직)
-Phase 5  [ ] View 계층 (MainMenuView, SampleView, OrderView, MonitoringView, ProductionView)
-Phase 6  [ ] Controller 계층 (SampleController, OrderController, MonitoringController, ProductionController, AppController DI)
-Phase 7  [ ] 통합 및 main.cpp 완성, 전체 흐름 검증
-Phase 8  [ ] DummyDataGenerator 도구
-Phase 9  [ ] DataMonitor 도구
-```
+- [x] **Phase 0** — 프로젝트 기반 설정 (빌드 환경, nlohmann/json, data/ 초기 파일) · [설계 문서](phase0-design.md)
+- [x] **Phase 1** — Model 계층 (Enums, SampleItem, InventoryItem, Order, ProductionQueueItem) · [설계 문서](phase1-design.md)
+- [x] **Phase 2** — Persistence 계층 (DataPersistence.h/.cpp, Manager 3종, JSON 직렬화) · [설계 문서](phase2-design.md)
+- [x] **Phase 3** — Repository 계층 (Inventory/Order/ProductionQueueRepository) · [설계 문서](phase3-design.md)
+- [x] **Phase 4** — Service 계층 (Inventory/Order/ProductionService, 상태 전이 로직) · [설계 문서](phase4-design.md)
+- [x] **Phase 5** — View 계층 (MainMenuView, SampleView, OrderView, MonitoringView, ProductionView) · [설계 문서](phase5-design.md)
+- [x] **Phase 6** — Controller 계층 (SampleController, OrderController, MonitoringController, ProductionController, AppController DI) · [설계 문서](phase6-design.md)
+- [x] **Phase 7** — 통합 및 main.cpp 완성, 전체 흐름 검증
+- [x] **Phase 8** — DummyDataGenerator 도구
+- [x] **Phase 9** — DataMonitor 도구
