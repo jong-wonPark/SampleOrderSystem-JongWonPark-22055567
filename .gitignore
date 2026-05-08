@@ -36,6 +36,7 @@ CMakeFiles/
 *.lib
 *.exp
 
-# Claude Code 메타데이터
-.claude/
+# Claude Code — 런타임 데이터만 제외 (agent/skill .md는 추적)
+.claude/agent-memory/
+.claude/settings.local.json
 .mcp.json
