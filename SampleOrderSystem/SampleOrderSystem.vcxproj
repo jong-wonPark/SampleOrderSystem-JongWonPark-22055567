@@ -143,6 +143,11 @@
     <ClCompile Include="Services\InventoryService.cpp" />
     <ClCompile Include="Services\OrderService.cpp" />
     <ClCompile Include="Services\ProductionService.cpp" />
+    <ClCompile Include="Views\MainMenuView.cpp" />
+    <ClCompile Include="Views\SampleView.cpp" />
+    <ClCompile Include="Views\OrderView.cpp" />
+    <ClCompile Include="Views\MonitoringView.cpp" />
+    <ClCompile Include="Views\ProductionView.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Repositories\InventoryRepository.h" />
@@ -151,6 +156,11 @@
     <ClInclude Include="Services\InventoryService.h" />
     <ClInclude Include="Services\OrderService.h" />
     <ClInclude Include="Services\ProductionService.h" />
+    <ClInclude Include="Views\MainMenuView.h" />
+    <ClInclude Include="Views\SampleView.h" />
+    <ClInclude Include="Views\OrderView.h" />
+    <ClInclude Include="Views\MonitoringView.h" />
+    <ClInclude Include="Views\ProductionView.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Models\Enums.h" />

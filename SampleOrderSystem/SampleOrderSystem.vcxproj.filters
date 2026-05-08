@@ -25,6 +25,9 @@
     <Filter Include="Services">
       <UniqueIdentifier>{A1B2C3D4-0004-0004-0004-000000000004}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Views">
+      <UniqueIdentifier>{A1B2C3D4-0005-0005-0005-000000000005}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -78,6 +81,38 @@
     <ClInclude Include="Services\ProductionService.h">
       <Filter>Services</Filter>
     </ClInclude>
+    <ClInclude Include="Views\MainMenuView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="Views\SampleView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="Views\OrderView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="Views\MonitoringView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="Views\ProductionView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Views\MainMenuView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Views\SampleView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Views\OrderView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Views\MonitoringView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Views\ProductionView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Models\Enums.h">
