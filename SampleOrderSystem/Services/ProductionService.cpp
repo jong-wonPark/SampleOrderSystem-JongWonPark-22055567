@@ -13,9 +13,11 @@ ProductionQueueItem ProductionService::enqueueProduction(
     const std::string& order_number,
     const std::string& sample_id,
     const std::string& sample_name,
-    int planned_quantity)
+    int    planned_quantity,
+    double total_production_time_hours)
 {
-    return queueRepo_.enqueue(order_number, sample_id, sample_name, planned_quantity);
+    return queueRepo_.enqueue(order_number, sample_id, sample_name,
+                              planned_quantity, total_production_time_hours);
 }
 
 bool ProductionService::startNextProduction() {

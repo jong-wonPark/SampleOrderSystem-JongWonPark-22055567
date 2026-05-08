@@ -221,8 +221,8 @@ TEST_F(ProductionServiceTest, CompleteProduction_StockNetZero) {
     prodSvc_.startNextProduction();
     auto prod = prodSvc_.getCurrentProduction();
     prodSvc_.completeProduction(prod->production_id);
-    // addStock(10) + deductStock(10) → 재고 순변화 0
-    EXPECT_EQ(invSvc_.getStock("S-001")->quantity, 0);
+    // planned=ceil(10/(0.9*0.9))=13, addStock(13)+deductStock(10) → 잔여 3
+    EXPECT_EQ(invSvc_.getStock("S-001")->quantity, 3);
 }
 
 TEST_F(ProductionServiceTest, CompleteProduction_NotInProduction_ReturnsFalse) {

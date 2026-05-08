@@ -179,8 +179,14 @@ int main(int argc, char* argv[]) {
     };
 
     for (const auto& pd : prodDefs) {
+        // 총 생산 시간 계산: 계획 수량 × 해당 시료 평균 생산시간
+        double avg_time = 0.0;
+        for (const auto& s : samples)
+            if (s.id == pd.sampleId) { avg_time = s.avgTime; break; }
+        double total_time = pd.qty * avg_time;
+
         auto p = prodMgr.enqueue(
-            orderNums[pd.orderIdx], pd.sampleId, pd.sampleName, pd.qty);
+            orderNums[pd.orderIdx], pd.sampleId, pd.sampleName, pd.qty, total_time);
         std::string statusStr = "Waiting";
         if (pd.inProduction) {
             prodMgr.start(p.production_id);

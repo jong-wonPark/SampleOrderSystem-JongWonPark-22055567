@@ -114,10 +114,11 @@ TEST(IntegrationScenarioB, NoStock_ProductionFlow) {
     ASSERT_TRUE(cur.has_value());
     EXPECT_EQ(cur->status, ProductionQueueStatus::InProduction);
 
-    // 5. 생산 완료 → CONFIRMED + 재고 순변화 0
+    // 5. 생산 완료 → CONFIRMED
+    // planned=ceil(10/(0.85*0.9))=14, addStock(14)+deductStock(10) → 잔여 4
     EXPECT_TRUE(s.prodSvc.completeProduction(cur->production_id));
     EXPECT_EQ(s.ordSvc.findByOrderNumber(o.order_number)->status, OrderStatus::CONFIRMED);
-    EXPECT_EQ(s.invSvc.getStock("S-002")->quantity, 0);
+    EXPECT_EQ(s.invSvc.getStock("S-002")->quantity, 4);
     EXPECT_TRUE(s.prodSvc.getQueue().empty());
 
     // 6. 출고 → RELEASE

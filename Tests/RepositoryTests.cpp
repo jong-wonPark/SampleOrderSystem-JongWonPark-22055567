@@ -195,20 +195,20 @@ protected:
 };
 
 TEST_F(ProductionQueueRepositoryTest, Enqueue_CacheUpdated) {
-    repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     EXPECT_EQ(repo_.findAll().size(), 1u);
 }
 
 TEST_F(ProductionQueueRepositoryTest, Enqueue_FilePersisted) {
-    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     ProductionQueueManager     mgr2{ tmp_.file("production_queue.json") };
     ProductionQueueRepository  repo2{ mgr2 };
     ASSERT_TRUE(repo2.findById(p.production_id).has_value());
 }
 
 TEST_F(ProductionQueueRepositoryTest, GetWaitingQueue_OnlyWaiting) {
-    auto p1 = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
-    repo_.enqueue("ORD-002", "S-002", "웨이퍼B", 5);
+    auto p1 = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
+    repo_.enqueue("ORD-002", "S-002", "웨이퍼B", 5, 10.0);
     repo_.start(p1.production_id);
 
     auto waiting = repo_.getWaitingQueue();
@@ -217,8 +217,8 @@ TEST_F(ProductionQueueRepositoryTest, GetWaitingQueue_OnlyWaiting) {
 }
 
 TEST_F(ProductionQueueRepositoryTest, GetFront_FifoOrder) {
-    auto p1 = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
-    repo_.enqueue("ORD-002", "S-002", "웨이퍼B", 5);
+    auto p1 = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
+    repo_.enqueue("ORD-002", "S-002", "웨이퍼B", 5, 10.0);
 
     // p1이 먼저 등록됐으므로 front여야 함
     auto front = repo_.getFront();
@@ -227,8 +227,8 @@ TEST_F(ProductionQueueRepositoryTest, GetFront_FifoOrder) {
 }
 
 TEST_F(ProductionQueueRepositoryTest, GetFront_ShiftsAfterDequeue) {
-    auto p1 = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
-    auto p2 = repo_.enqueue("ORD-002", "S-002", "웨이퍼B", 5);
+    auto p1 = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
+    auto p2 = repo_.enqueue("ORD-002", "S-002", "웨이퍼B", 5, 10.0);
 
     repo_.start(p1.production_id);
     repo_.dequeue(p1.production_id);
@@ -243,7 +243,7 @@ TEST_F(ProductionQueueRepositoryTest, GetFront_NullWhenEmpty) {
 }
 
 TEST_F(ProductionQueueRepositoryTest, Start_CacheUpdated) {
-    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     repo_.start(p.production_id);
     auto found = repo_.findById(p.production_id);
     ASSERT_TRUE(found.has_value());
@@ -252,7 +252,7 @@ TEST_F(ProductionQueueRepositoryTest, Start_CacheUpdated) {
 }
 
 TEST_F(ProductionQueueRepositoryTest, Dequeue_RemovesFromCache_ReturnsItem) {
-    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     repo_.start(p.production_id);
     auto completed = repo_.dequeue(p.production_id);
     EXPECT_EQ(completed.order_number, "ORD-001");
@@ -260,21 +260,21 @@ TEST_F(ProductionQueueRepositoryTest, Dequeue_RemovesFromCache_ReturnsItem) {
 }
 
 TEST_F(ProductionQueueRepositoryTest, Cancel_RemovesFromCache) {
-    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     repo_.cancel(p.production_id);
     EXPECT_TRUE(repo_.findAll().empty());
     EXPECT_FALSE(repo_.findById(p.production_id).has_value());
 }
 
 TEST_F(ProductionQueueRepositoryTest, Cancel_InProduction_ExceptionPropagates) {
-    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = repo_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     repo_.start(p.production_id);
     EXPECT_THROW(repo_.cancel(p.production_id), std::runtime_error);
 }
 
 TEST_F(ProductionQueueRepositoryTest, ConstructorLoadsExistingData) {
-    mgr_.enqueue("ORD-001", "S-001", "웨이퍼A", 10);
-    mgr_.enqueue("ORD-002", "S-002", "웨이퍼B", 5);
+    mgr_.enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
+    mgr_.enqueue("ORD-002", "S-002", "웨이퍼B", 5, 10.0);
     ProductionQueueRepository repo2{ mgr_ };
     EXPECT_EQ(repo2.findAll().size(), 2u);
     EXPECT_EQ(repo2.getWaitingQueue().size(), 2u);

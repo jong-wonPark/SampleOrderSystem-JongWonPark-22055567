@@ -232,7 +232,7 @@ protected:
 };
 
 TEST_F(ProductionQueueManagerTest, Enqueue_ReturnsWaitingItem) {
-    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     EXPECT_FALSE(p.production_id.empty());
     EXPECT_EQ(p.order_number,  "ORD-001");
     EXPECT_EQ(p.status,        ProductionQueueStatus::Waiting);
@@ -240,14 +240,14 @@ TEST_F(ProductionQueueManagerTest, Enqueue_ReturnsWaitingItem) {
 }
 
 TEST_F(ProductionQueueManagerTest, Enqueue_ProductionIdFormat) {
-    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     EXPECT_EQ(p.production_id.substr(0, 5), "PROD-");
     EXPECT_EQ(p.production_id.size(), 18u); // PROD-YYYYMMDD-XXXX = 5+8+1+4
 }
 
 TEST_F(ProductionQueueManagerTest, Enqueue_SequentialIds) {
-    auto p1 = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
-    auto p2 = mgr_->enqueue("ORD-002", "S-002", "웨이퍼B", 5);
+    auto p1 = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
+    auto p2 = mgr_->enqueue("ORD-002", "S-002", "웨이퍼B", 5, 10.0);
     EXPECT_NE(p1.production_id, p2.production_id);
 }
 
@@ -256,13 +256,13 @@ TEST_F(ProductionQueueManagerTest, GetAll_Empty) {
 }
 
 TEST_F(ProductionQueueManagerTest, GetFront_ReturnsFirst_ThenShiftsAfterComplete) {
-    auto p1 = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p1 = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     // p1이 front여야 함
     auto front1 = mgr_->get_front();
     ASSERT_TRUE(front1.has_value());
     EXPECT_EQ(front1->production_id, p1.production_id);
 
-    auto p2 = mgr_->enqueue("ORD-002", "S-002", "웨이퍼B", 5);
+    auto p2 = mgr_->enqueue("ORD-002", "S-002", "웨이퍼B", 5, 10.0);
     // p1 처리 후 p2가 front가 되어야 함
     mgr_->start(p1.production_id);
     mgr_->complete(p1.production_id);
@@ -277,14 +277,14 @@ TEST_F(ProductionQueueManagerTest, GetFront_NoneWhenEmpty) {
 }
 
 TEST_F(ProductionQueueManagerTest, Start_WaitingToInProduction) {
-    auto p       = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p       = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     auto started = mgr_->start(p.production_id);
     EXPECT_EQ(started.status, ProductionQueueStatus::InProduction);
     EXPECT_FALSE(started.started_at.empty());
 }
 
 TEST_F(ProductionQueueManagerTest, Start_AlreadyInProduction_Throws) {
-    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     mgr_->start(p.production_id);
     EXPECT_THROW(mgr_->start(p.production_id), std::runtime_error);
 }
@@ -294,7 +294,7 @@ TEST_F(ProductionQueueManagerTest, Start_UnknownId_Throws) {
 }
 
 TEST_F(ProductionQueueManagerTest, Complete_RemovesFromQueue_ReturnsItem) {
-    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     mgr_->start(p.production_id);
     auto completed = mgr_->complete(p.production_id);
     EXPECT_EQ(completed.order_number, "ORD-001");
@@ -302,25 +302,25 @@ TEST_F(ProductionQueueManagerTest, Complete_RemovesFromQueue_ReturnsItem) {
 }
 
 TEST_F(ProductionQueueManagerTest, Complete_NotInProduction_Throws) {
-    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     EXPECT_THROW(mgr_->complete(p.production_id), std::runtime_error);
 }
 
 TEST_F(ProductionQueueManagerTest, Cancel_WaitingItem) {
-    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     mgr_->cancel(p.production_id);
     EXPECT_TRUE(mgr_->get_all().empty());
 }
 
 TEST_F(ProductionQueueManagerTest, Cancel_InProduction_Throws) {
-    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     mgr_->start(p.production_id);
     EXPECT_THROW(mgr_->cancel(p.production_id), std::runtime_error);
 }
 
 TEST_F(ProductionQueueManagerTest, GetByStatus_FilterWaiting) {
-    auto p1 = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
-    mgr_->enqueue("ORD-002", "S-002", "웨이퍼B", 5);
+    auto p1 = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
+    mgr_->enqueue("ORD-002", "S-002", "웨이퍼B", 5, 10.0);
     mgr_->start(p1.production_id);
 
     EXPECT_EQ(mgr_->get_by_status(ProductionQueueStatus::Waiting).size(),      1u);
@@ -328,7 +328,7 @@ TEST_F(ProductionQueueManagerTest, GetByStatus_FilterWaiting) {
 }
 
 TEST_F(ProductionQueueManagerTest, Persistence_StatusSurvivesReload) {
-    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10);
+    auto p = mgr_->enqueue("ORD-001", "S-001", "웨이퍼A", 10, 10.0);
     mgr_->start(p.production_id);
 
     ProductionQueueManager mgr2(tmp_.file("production_queue.json"));

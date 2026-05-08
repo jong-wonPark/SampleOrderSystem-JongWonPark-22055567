@@ -80,14 +80,16 @@ void from_json(const json& j, Order& o) {
 
 void to_json(json& j, const ProductionQueueItem& p) {
     j = {
-        {"production_id",    p.production_id},
-        {"order_number",     p.order_number},
-        {"sample_id",        p.sample_id},
-        {"sample_name",      p.sample_name},
-        {"planned_quantity", p.planned_quantity},
-        {"status",           toJsonString(p.status)},
-        {"queued_at",        p.queued_at},
-        {"started_at",       p.started_at}
+        {"production_id",              p.production_id},
+        {"order_number",               p.order_number},
+        {"sample_id",                  p.sample_id},
+        {"sample_name",                p.sample_name},
+        {"planned_quantity",           p.planned_quantity},
+        {"status",                     toJsonString(p.status)},
+        {"queued_at",                  p.queued_at},
+        {"started_at",                 p.started_at},
+        {"total_production_time_hours", p.total_production_time_hours},
+        {"estimated_completion",        p.estimated_completion}
     };
 }
 
@@ -100,6 +102,11 @@ void from_json(const json& j, ProductionQueueItem& p) {
     p.status = productionQueueStatusFromJson(j.at("status").get<std::string>());
     j.at("queued_at").get_to(p.queued_at);
     j.at("started_at").get_to(p.started_at);
+    // 기존 JSON 파일 호환성: 필드 없으면 기본값 유지
+    if (j.contains("total_production_time_hours"))
+        j.at("total_production_time_hours").get_to(p.total_production_time_hours);
+    if (j.contains("estimated_completion"))
+        j.at("estimated_completion").get_to(p.estimated_completion);
 }
 
 
@@ -356,18 +363,21 @@ ProductionQueueItem ProductionQueueManager::enqueue(
     const std::string& order_number,
     const std::string& sample_id,
     const std::string& sample_name,
-    int planned_quantity)
+    int    planned_quantity,
+    double total_production_time_hours)
 {
     json arr = load();
     ProductionQueueItem p;
-    p.production_id    = new_production_id(arr);
-    p.order_number     = order_number;
-    p.sample_id        = sample_id;
-    p.sample_name      = sample_name;
-    p.planned_quantity = planned_quantity;
-    p.status           = ProductionQueueStatus::Waiting;
-    p.queued_at        = now_iso8601();
-    p.started_at       = "";
+    p.production_id              = new_production_id(arr);
+    p.order_number               = order_number;
+    p.sample_id                  = sample_id;
+    p.sample_name                = sample_name;
+    p.planned_quantity           = planned_quantity;
+    p.status                     = ProductionQueueStatus::Waiting;
+    p.queued_at                  = now_iso8601();
+    p.started_at                 = "";
+    p.total_production_time_hours = total_production_time_hours;
+    p.estimated_completion       = "";
 
     json j;
     to_json(j, p);
@@ -418,6 +428,19 @@ ProductionQueueItem ProductionQueueManager::start(const std::string& production_
                 "Cannot start: not Waiting. production_id=" + production_id);
         j_item["status"]     = toJsonString(ProductionQueueStatus::InProduction);
         j_item["started_at"] = now_iso8601();
+
+        // 완료 예정 시각 = 현재 시각 + total_production_time_hours
+        {
+            double total_h = j_item.value("total_production_time_hours", 0.0);
+            auto est_t = std::time(nullptr)
+                         + static_cast<std::time_t>(total_h * 3600.0);
+            std::tm est_tm{};
+            localtime_s(&est_tm, &est_t);
+            std::ostringstream oss;
+            oss << std::put_time(&est_tm, "%Y-%m-%dT%H:%M:%S");
+            j_item["estimated_completion"] = oss.str();
+        }
+
         save(arr);
         ProductionQueueItem p;
         from_json(j_item, p);

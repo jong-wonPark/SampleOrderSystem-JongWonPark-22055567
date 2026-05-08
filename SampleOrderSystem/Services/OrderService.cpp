@@ -1,4 +1,5 @@
 #include "OrderService.h"
+#include <cmath>
 
 OrderService::OrderService(
     OrderRepository&   orderRepo,
@@ -27,11 +28,31 @@ bool OrderService::approveOrder(const std::string& order_number) {
         inventoryService_.deductStock(order->sample_id, order->order_quantity);
         orderRepo_.updateStatus(order_number, OrderStatus::CONFIRMED);
     } else {
+        // 부족분 계산
+        int current_stock = 0;
+        if (auto inv = inventoryService_.getStock(order->sample_id))
+            current_stock = inv->quantity;
+        int shortage = order->order_quantity - current_stock;
+
+        // 생산량 = ceil(부족분 / (수율 × 0.9))
+        double yield_rate = 1.0;
+        double avg_time_h = 0.0;
+        if (auto sample = inventoryService_.findSampleById(order->sample_id)) {
+            yield_rate = sample->yield_rate;
+            avg_time_h = sample->avg_production_time_hours;
+        }
+        int planned_qty = static_cast<int>(
+            std::ceil(shortage / (yield_rate * 0.9)));
+
+        // 총 생산 시간 = 생산량 × 평균 생산시간
+        double total_time_h = planned_qty * avg_time_h;
+
         productionService_.enqueueProduction(
             order_number,
             order->sample_id,
             order->sample_name,
-            order->order_quantity);
+            planned_qty,
+            total_time_h);
         orderRepo_.updateStatus(order_number, OrderStatus::PRODUCING);
     }
     return true;

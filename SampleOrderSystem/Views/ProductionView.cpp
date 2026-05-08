@@ -1,6 +1,35 @@
 #include "ProductionView.h"
 
+#include <algorithm>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
+
+// ── 경과 시간(시간) 계산 ─────────────────────────────────────────────
+
+static double hoursElapsed(const std::string& iso_start) {
+    if (iso_start.empty()) return 0.0;
+    std::tm tm{};
+    int y, mo, d, h, mi, s;
+    if (sscanf_s(iso_start.c_str(), "%d-%d-%dT%d:%d:%d",
+                 &y, &mo, &d, &h, &mi, &s) != 6) return 0.0;
+    tm.tm_year = y - 1900; tm.tm_mon = mo - 1; tm.tm_mday = d;
+    tm.tm_hour = h; tm.tm_min = mi; tm.tm_sec = s;
+    tm.tm_isdst = -1;
+    auto start_t = std::mktime(&tm);
+    return std::difftime(std::time(nullptr), start_t) / 3600.0;
+}
+
+// ISO 8601에서 "MM-DD HH:MM" 형식으로 단축 ────────────────────────────
+
+static std::string shortTime(const std::string& iso) {
+    if (iso.size() < 16) return iso;
+    // "2026-05-08T10:30:00" → "05-08 10:30"
+    return iso.substr(5, 5) + " " + iso.substr(11, 5);
+}
+
+// ── 메뉴 5: 출고 처리 ────────────────────────────────────────────────
 
 void ProductionView::showConfirmedOrders(const std::vector<Order>& orders) {
     using V = MainMenuView;
@@ -48,6 +77,8 @@ void ProductionView::showShipResult(const Order& order) {
               << " 상태로 전환되었습니다.\n";
 }
 
+// ── 메뉴 6: 생산 라인 ────────────────────────────────────────────────
+
 int ProductionView::promptProductionSubMenu() {
     MainMenuView::printHeader("생산 라인");
     std::cout << "\n"
@@ -68,22 +99,36 @@ void ProductionView::showProductionQueue(
         else                                                  waiting.push_back(p);
     }
 
-    // ── 생산 중 ────────────────────────────────────────────────
+    // ── 생산 중 (InProduction) ────────────────────────────────────
     std::cout << "\n[생산 중 (InProduction)]\n";
     if (inProd.empty()) {
         std::cout << "  현재 생산 중인 항목이 없습니다.\n";
     } else {
         V::printLine('-');
         std::cout << "  "
-                  << V::padLeft("번호", 4)        << "  "
-                  << V::padRight("생산ID", 19)     << "  "
-                  << V::padRight("주문번호", 18)   << "  "
-                  << V::padRight("시료명", 14)     << "  "
-                  << V::padLeft("수량", 4)         << "  "
-                  << "시작 시각\n";
+                  << V::padLeft("번호", 4)          << "  "
+                  << V::padRight("생산ID", 19)       << "  "
+                  << V::padRight("주문번호", 18)      << "  "
+                  << V::padRight("시료명", 14)        << "  "
+                  << V::padRight("진행(생산/계획)", 14) << "  "
+                  << "완료 예정\n";
         V::printLine('-');
         for (int i = 0; i < (int)inProd.size(); ++i) {
             const auto& p = inProd[i];
+
+            // 현재까지 생산량 추정 (경과 시간 기반)
+            int produced = 0;
+            if (p.total_production_time_hours > 0 && p.planned_quantity > 0) {
+                double avg_per = p.total_production_time_hours / p.planned_quantity;
+                double elapsed = hoursElapsed(p.started_at);
+                produced = std::min(
+                    static_cast<int>(elapsed / avg_per), p.planned_quantity);
+            }
+            std::string progress = std::to_string(produced) + "/"
+                                 + std::to_string(p.planned_quantity);
+            std::string est = p.estimated_completion.empty()
+                ? "-" : shortTime(p.estimated_completion);
+
             std::cout << "  "
                       << V::padLeft(std::to_string(i + 1), 4) << "  "
                       << Clr::BrYellow
@@ -91,45 +136,47 @@ void ProductionView::showProductionQueue(
                       << Clr::Reset << "  "
                       << V::padRight(V::truncate(p.order_number, 18), 18)  << "  "
                       << V::padRight(V::truncate(p.sample_name, 14), 14)   << "  "
-                      << V::padLeft(std::to_string(p.planned_quantity), 4) << "  "
-                      << V::truncate(p.started_at.empty() ? "-" : p.started_at, 19)
-                      << "\n";
+                      << V::padRight(progress, 14)                         << "  "
+                      << est << "\n";
         }
         V::printLine('-');
     }
 
-    // ── 대기 중 ────────────────────────────────────────────────
+    // ── 대기 중 (Waiting) FIFO ────────────────────────────────────
     std::cout << "\n[대기 중 (Waiting) — FIFO 순서]\n";
     if (waiting.empty()) {
         std::cout << "  대기 중인 항목이 없습니다.\n";
     } else {
         V::printLine('-');
         std::cout << "  "
-                  << V::padLeft("순번", 4)         << "  "
-                  << V::padRight("생산ID", 19)      << "  "
-                  << V::padRight("주문번호", 18)    << "  "
-                  << V::padRight("시료명", 14)      << "  "
-                  << V::padLeft("수량", 4)          << "  "
+                  << V::padLeft("순번", 4)            << "  "
+                  << V::padRight("생산ID", 19)         << "  "
+                  << V::padRight("주문번호", 18)        << "  "
+                  << V::padRight("시료명", 14)          << "  "
+                  << V::padLeft("계획수량", 8)          << "  "
+                  << V::padLeft("예상소요", 8)          << "  "
                   << "등록 시각\n";
         V::printLine('-');
         for (int i = 0; i < (int)waiting.size(); ++i) {
             const auto& p = waiting[i];
+            // 총 생산 시간을 분 단위로 표시
+            int total_mins = static_cast<int>(
+                std::round(p.total_production_time_hours * 60.0));
+            std::ostringstream dur;
+            if (total_mins >= 60) dur << (total_mins / 60) << "h" << (total_mins % 60) << "m";
+            else                  dur << total_mins << "m";
+
             std::cout << "  "
                       << V::padLeft(std::to_string(i + 1), 4)              << "  "
                       << V::padRight(V::truncate(p.production_id, 19), 19) << "  "
                       << V::padRight(V::truncate(p.order_number, 18), 18)  << "  "
                       << V::padRight(V::truncate(p.sample_name, 14), 14)   << "  "
-                      << V::padLeft(std::to_string(p.planned_quantity), 4) << "  "
+                      << V::padLeft(std::to_string(p.planned_quantity), 8) << "  "
+                      << V::padLeft(dur.str(), 8)                          << "  "
                       << V::truncate(p.queued_at, 19) << "\n";
         }
         V::printLine('-');
     }
-}
-
-void ProductionView::showStartResult(const ProductionQueueItem& item) {
-    MainMenuView::showSuccess("[" + item.production_id + "] 생산 시작");
-    std::cout << "  → " << Clr::BrYellow << "생산 중(InProduction)" << Clr::Reset
-              << " 상태로 전환되었습니다.\n";
 }
 
 int ProductionView::promptSelectInProduction(int count) {
@@ -143,6 +190,14 @@ int ProductionView::promptSelectInProduction(int count) {
     MainMenuView::showError("1~" + std::to_string(count) + " 또는 0을 입력하세요.");
     return MainMenuView::promptChoice(0, count,
         "1~" + std::to_string(count) + " 또는 0을 입력하세요.");
+}
+
+void ProductionView::showStartResult(const ProductionQueueItem& item) {
+    MainMenuView::showSuccess("[" + item.production_id + "] 생산 시작");
+    std::cout << "  → " << Clr::BrYellow << "생산 중(InProduction)" << Clr::Reset
+              << " 상태로 전환되었습니다.\n";
+    if (!item.estimated_completion.empty())
+        std::cout << "  완료 예정: " << item.estimated_completion << "\n";
 }
 
 void ProductionView::showCompleteResult(const Order& confirmedOrder) {

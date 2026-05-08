@@ -18,7 +18,8 @@ public:
     ProductionQueueItem enqueueProduction(const std::string& order_number,
                                           const std::string& sample_id,
                                           const std::string& sample_name,
-                                          int                planned_quantity);
+                                          int                planned_quantity,
+                                          double             total_production_time_hours);
 
     // 메뉴 6: 큐 front(Waiting) → InProduction (대기 항목 없으면 false)
     bool startNextProduction();
