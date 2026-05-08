@@ -46,7 +46,7 @@ void ProductionController::runProduction() {
 
     // 3. 현재 처리 중인 내역 + 대기 중인 내역 표시
     MainMenuView::printHeader("생산 라인");
-    ProductionView::showProductionQueue(prodSvc_.getQueue());
+    ProductionView::showProductionQueue(prodSvc_.getQueue(), ordSvc_.getAllOrders());
 
     // 4. Enter → 뒤로가기
     std::cout << "\n";

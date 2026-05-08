@@ -14,7 +14,8 @@ public:
     static void showShipResult(const Order& order);
 
     // 메뉴 6: 생산 라인
-    static void showProductionQueue(const std::vector<ProductionQueueItem>& queue);
+    static void showProductionQueue(const std::vector<ProductionQueueItem>& queue,
+                                    const std::vector<Order>&               orders);
     static void showStartResult(const ProductionQueueItem& item);
     static void showCompleteResult(const Order& confirmedOrder);
 };

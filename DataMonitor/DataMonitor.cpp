@@ -520,17 +520,23 @@ void DataMonitor::show_production(const MonitorSnapshot& snap) const {
                   << rpad("생산ID", 19)               << "  "
                   << rpad("주문번호", 18)              << "  "
                   << rpad("시료명", 16)                << "  "
-                  << lpad("수량", 4)                   << "  "
+                  << lpad("주문량", 6)                 << "  "
+                  << lpad("계획수량", 8)               << "  "
                   << "등록 시각\n" << Clr::Reset;
         hline('-');
         for (int i = 0; i < (int)waiting.size(); ++i) {
             const auto& p = waiting[i];
+            // 주문번호로 주문량 조회
+            int order_qty = 0;
+            for (const auto& o : snap.orders)
+                if (o.order_number == p.order_number) { order_qty = o.order_quantity; break; }
             std::cout << "  "
-                      << lpad(std::to_string(i + 1), 4)        << "  "
-                      << rpad(trunc(p.production_id, 19), 19)   << "  "
-                      << rpad(trunc(p.order_number, 18), 18)    << "  "
-                      << rpad(trunc(p.sample_name, 16), 16)     << "  "
-                      << lpad(std::to_string(p.planned_quantity), 4) << "  "
+                      << lpad(std::to_string(i + 1), 4)              << "  "
+                      << rpad(trunc(p.production_id, 19), 19)         << "  "
+                      << rpad(trunc(p.order_number, 18), 18)          << "  "
+                      << rpad(trunc(p.sample_name, 16), 16)           << "  "
+                      << lpad(std::to_string(order_qty), 6)           << "  "
+                      << lpad(std::to_string(p.planned_quantity), 8)  << "  "
                       << trunc(p.queued_at, 19) << "\n";
         }
         hline('-');

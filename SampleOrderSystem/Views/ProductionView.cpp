@@ -80,9 +80,17 @@ void ProductionView::showShipResult(const Order& order) {
 // ── 메뉴 6: 생산 라인 ────────────────────────────────────────────────
 
 void ProductionView::showProductionQueue(
-    const std::vector<ProductionQueueItem>& queue)
+    const std::vector<ProductionQueueItem>& queue,
+    const std::vector<Order>&               orders)
 {
     using V = MainMenuView;
+
+    // 주문번호로 주문량 조회 헬퍼
+    auto getOrderQty = [&](const std::string& order_number) -> int {
+        for (const auto& o : orders)
+            if (o.order_number == order_number) return o.order_quantity;
+        return 0;
+    };
     std::vector<ProductionQueueItem> inProd, waiting;
     for (const auto& p : queue) {
         if (p.status == ProductionQueueStatus::InProduction) inProd.push_back(p);
@@ -143,12 +151,14 @@ void ProductionView::showProductionQueue(
                   << V::padRight("생산ID", 19)         << "  "
                   << V::padRight("주문번호", 18)        << "  "
                   << V::padRight("시료명", 14)          << "  "
+                  << V::padLeft("주문량", 6)            << "  "
                   << V::padLeft("계획수량", 8)          << "  "
                   << V::padLeft("예상소요", 8)          << "  "
                   << "등록 시각\n";
         V::printLine('-');
         for (int i = 0; i < (int)waiting.size(); ++i) {
             const auto& p = waiting[i];
+            int order_qty = getOrderQty(p.order_number);
             // 총 생산 시간을 분 단위로 표시
             int total_mins = static_cast<int>(
                 std::round(p.total_production_time_hours * 60.0));
@@ -161,6 +171,7 @@ void ProductionView::showProductionQueue(
                       << V::padRight(V::truncate(p.production_id, 19), 19) << "  "
                       << V::padRight(V::truncate(p.order_number, 18), 18)  << "  "
                       << V::padRight(V::truncate(p.sample_name, 14), 14)   << "  "
+                      << V::padLeft(std::to_string(order_qty), 6)          << "  "
                       << V::padLeft(std::to_string(p.planned_quantity), 8) << "  "
                       << V::padLeft(dur.str(), 8)                          << "  "
                       << V::truncate(p.queued_at, 19) << "\n";
