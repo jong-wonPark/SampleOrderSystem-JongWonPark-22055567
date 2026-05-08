@@ -74,10 +74,14 @@
   <ItemGroup>
     <ClCompile Include="DataPersistenceTests.cpp" />
     <ClCompile Include="RepositoryTests.cpp" />
+    <ClCompile Include="ServiceTests.cpp" />
     <ClCompile Include="..\SampleOrderSystem\Persistence\DataPersistence.cpp" />
     <ClCompile Include="..\SampleOrderSystem\Repositories\InventoryRepository.cpp" />
     <ClCompile Include="..\SampleOrderSystem\Repositories\OrderRepository.cpp" />
     <ClCompile Include="..\SampleOrderSystem\Repositories\ProductionQueueRepository.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\Services\InventoryService.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\Services\OrderService.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\Services\ProductionService.cpp" />
     <ClCompile Include="..\packages\gmock.1.11.0\lib\native\src\gtest\src\gtest_main.cc" />
   </ItemGroup>
   <ItemGroup>

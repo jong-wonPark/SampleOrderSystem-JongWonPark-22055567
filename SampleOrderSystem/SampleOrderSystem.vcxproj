@@ -140,11 +140,17 @@
     <ClCompile Include="Repositories\InventoryRepository.cpp" />
     <ClCompile Include="Repositories\OrderRepository.cpp" />
     <ClCompile Include="Repositories\ProductionQueueRepository.cpp" />
+    <ClCompile Include="Services\InventoryService.cpp" />
+    <ClCompile Include="Services\OrderService.cpp" />
+    <ClCompile Include="Services\ProductionService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Repositories\InventoryRepository.h" />
     <ClInclude Include="Repositories\OrderRepository.h" />
     <ClInclude Include="Repositories\ProductionQueueRepository.h" />
+    <ClInclude Include="Services\InventoryService.h" />
+    <ClInclude Include="Services\OrderService.h" />
+    <ClInclude Include="Services\ProductionService.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Models\Enums.h" />
