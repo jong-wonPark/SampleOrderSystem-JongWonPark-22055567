@@ -371,7 +371,7 @@ void DataMonitor::show_inventory(const MonitorSnapshot& snap) const {
               << lpad("재고", 6)                  << "  "
               << rpad("단위", 4)                  << "  "
               << lpad("수율", 6)                  << "  "
-              << lpad("생산(h)", 7)               << "  "
+              << lpad("생산(분)", 8)               << "  "
               << "최종 갱신\n" << Clr::Reset;
     hline('-');
     if (snap.samples.empty()) {
@@ -384,9 +384,9 @@ void DataMonitor::show_inventory(const MonitorSnapshot& snap) const {
                     qty = inv.quantity; unit = inv.unit; updated = inv.last_updated; break;
                 }
             }
-            std::ostringstream yield_s, time_s;
+            std::ostringstream yield_s;
+            int prod_mins = static_cast<int>(std::round(s.avg_production_time_hours * 60.0));
             yield_s << std::fixed << std::setprecision(1) << (s.yield_rate * 100.0) << "%";
-            time_s  << std::fixed << std::setprecision(1) << s.avg_production_time_hours;
             const char* qc = (qty == 0) ? Clr::BrRed
                            : (qty < 10) ? Clr::BrYellow
                            : Clr::BrGreen;
@@ -395,8 +395,8 @@ void DataMonitor::show_inventory(const MonitorSnapshot& snap) const {
                       << rpad(trunc(s.sample_name, 20), 20)  << "  "
                       << qc << lpad(std::to_string(qty), 6) << Clr::Reset << "  "
                       << rpad(unit, 4)             << "  "
-                      << lpad(yield_s.str(), 6)    << "  "
-                      << lpad(time_s.str(), 7)     << "  "
+                      << lpad(yield_s.str(), 6)                      << "  "
+                      << lpad(std::to_string(prod_mins), 8)           << "  "
                       << trunc(updated, 19) << "\n";
         }
     }
