@@ -21,7 +21,7 @@ SampleInput SampleView::promptSampleInput() {
     SampleInput in;
     in.sample_id   = MainMenuView::prompt("시료ID (예: S-001)");
     in.sample_name = MainMenuView::prompt("시료명");
-    int mins = MainMenuView::promptInt("평균 생산시간 (분)");
+    double mins = MainMenuView::promptDouble("평균 생산시간 (분, 소수점 가능)");
     in.avg_production_time_hours = mins / 60.0;
     while (true) {
         in.yield_rate = MainMenuView::promptDouble("수율 (0.0 ~ 1.0)");
@@ -58,8 +58,8 @@ static void printSampleRow(int idx,
     for (const auto& inv : inventory)
         if (inv.sample_id == s.sample_id) { qty = inv.quantity; unit = inv.unit; break; }
 
-    std::ostringstream yield_s, qty_s;
-    int mins = static_cast<int>(std::round(s.avg_production_time_hours * 60.0));
+    std::ostringstream mins_s, yield_s, qty_s;
+    mins_s  << std::fixed << std::setprecision(1) << (s.avg_production_time_hours * 60.0);
     yield_s << std::fixed << std::setprecision(1) << (s.yield_rate * 100.0) << "%";
     qty_s   << qty << " " << unit;
 
@@ -71,7 +71,7 @@ static void printSampleRow(int idx,
               << V::padLeft(std::to_string(idx), 4)            << "  "
               << V::padRight(V::truncate(s.sample_id, 8), 8)    << "  "
               << V::padRight(V::truncate(s.sample_name, 20), 20) << "  "
-              << V::padLeft(std::to_string(mins), 12)            << "  "
+              << V::padLeft(mins_s.str(), 12)                    << "  "
               << V::padLeft(yield_s.str(), 6)                    << "  "
               << qc << V::padLeft(qty_s.str(), 8) << Clr::Reset  << "\n";
 }
